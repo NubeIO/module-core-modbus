@@ -2,6 +2,7 @@ package module_core_modbus
 
 import (
 	"github.com/NubeIO/module-core-modbus/logger"
+	"github.com/NubeIO/module-core-modbus/pkg"
 	"github.com/NubeIO/rubix-os/module/shared"
 	"github.com/hashicorp/go-plugin"
 )
@@ -9,7 +10,7 @@ import (
 func ServePlugin() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: shared.HandshakeConfig,
-		Plugins:         plugin.PluginSet{"module-core-modbus": &shared.NubeModule{}},
+		Plugins:         plugin.PluginSet{"module-core-modbus": &shared.NubeModule{Impl: &pkg.Module{}}},
 		GRPCServer:      plugin.DefaultGRPCServer,
 	})
 }
