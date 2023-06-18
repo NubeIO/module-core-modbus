@@ -14,7 +14,7 @@ func (m *Module) DefaultConfig() *Config {
 	}
 }
 
-func (m *Module) GetConfig() *Config {
+func (m *Module) GetConfig() interface{} {
 	return m.config
 }
 
