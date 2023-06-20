@@ -1,10 +1,10 @@
 package logger
 
-import "github.com/hashicorp/go-hclog"
+import log "github.com/sirupsen/logrus"
 
-func SetLogger(logLevel string) {
-	hclog.SetDefault(hclog.New(&hclog.LoggerOptions{
-		Name:  "module-core-modbus",
-		Level: hclog.LevelFromString(logLevel),
-	}))
+func SetLogger(logLevel log.Level) {
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: true,
+	})
+	log.SetLevel(logLevel)
 }

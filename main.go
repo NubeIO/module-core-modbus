@@ -1,7 +1,6 @@
 package module_core_modbus
 
 import (
-	"github.com/NubeIO/module-core-modbus/logger"
 	"github.com/NubeIO/module-core-modbus/pkg"
 	"github.com/NubeIO/rubix-os/module/shared"
 	"github.com/hashicorp/go-plugin"
@@ -16,6 +15,5 @@ func ServePlugin() {
 }
 
 func main() {
-	logger.SetLogger("INFO")
 	ServePlugin()
 }

@@ -1,5 +1,12 @@
 package pkg
 
+import (
+	"github.com/NubeIO/module-core-modbus/logger"
+	"github.com/go-yaml/yaml"
+	log "github.com/sirupsen/logrus"
+	"strings"
+)
+
 type Config struct {
 	EnablePolling     bool   `yaml:"enable_polling"`
 	LogLevel          string `yaml:"log_level"`
@@ -19,6 +26,22 @@ func (m *Module) GetConfig() interface{} {
 }
 
 func (m *Module) ValidateAndSetConfig(config []byte) ([]byte, error) {
-	// TODO implement me
-	panic("implement me")
+	newConfig := m.DefaultConfig()
+	_ = yaml.Unmarshal(config, newConfig)
+
+	logLevel, err := log.ParseLevel(newConfig.LogLevel)
+	if err != nil {
+		logLevel = log.ErrorLevel
+	}
+	logger.SetLogger(logLevel)
+
+	newConfig.LogLevel = strings.ToUpper(logLevel.String())
+	newConfValid, err := yaml.Marshal(newConfig)
+	if err != nil {
+		return nil, err
+	}
+	m.config = newConfig
+
+	log.Info("config is set")
+	return newConfValid, nil
 }

@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/NubeIO/lib-schema/modbuschema"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
 	"github.com/NubeIO/rubix-os/module/common"
 )
 
 const (
 	listSerial        = "/list/serial"
-	schemaNetwork     = "/schema/network"
-	schemaDevice      = "/schema/device"
-	schemaPoint       = "/schema/point"
 	jsonSchemaNetwork = "/schema/json/network"
 	jsonSchemaDevice  = "/schema/json/device"
 	jsonSchemaPoint   = "/schema/json/point"
@@ -35,8 +33,19 @@ func (m *Module) Get(path string) ([]byte, error) {
 }
 
 func (m *Module) Post(path string, body []byte) ([]byte, error) {
-	// TODO implement me
-	panic("implement me")
+	if path == common.NetworksURL {
+		var network *model.Network
+		err := json.Unmarshal(body, &network)
+		if err != nil {
+			return nil, err
+		}
+		net, err := m.addNetwork(network)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(net)
+	}
+	return nil, errors.New("not found")
 }
 
 func (m *Module) Put(path, uuid string, body []byte) ([]byte, error) {

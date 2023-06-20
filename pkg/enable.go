@@ -28,9 +28,9 @@ func (m *Module) Enable() error {
 					conf.PollQueueLogLevel = "ERROR"
 				}
 				pollQueueConfig := pollqueue.Config{EnablePolling: conf.EnablePolling, LogLevel: conf.PollQueueLogLevel}
-				pollManager := NewPollManager( // TODO: Check this
+				pollManager := NewPollManager(
 					&pollQueueConfig,
-					&m.dbHelper,
+					&m.dbHelper, // TODO: Check this
 					net.UUID,
 					net.Name,
 					m.pluginUUID,
@@ -40,6 +40,12 @@ func (m *Module) Enable() error {
 				pollManager.StartPolling() // TODO: Check this
 				m.NetworkPollManagers = append(m.NetworkPollManagers, pollManager)
 			}
+			m.running = true
+			if err := m.ModbusPolling(); err != nil {
+				m.fault = true
+				m.running = false
+				m.modbusErrorMsg("POLLING ERROR on routine: %v\n", err)
+			}
 		}
 	}
 
@@ -47,6 +53,18 @@ func (m *Module) Enable() error {
 }
 
 func (m *Module) Disable() error {
-	// TODO implement me
-	panic("implement me")
+	m.modbusPollingMsg("MODBUS Plugin Disable()")
+	m.enabled = false
+	if m.pollingEnabled {
+		m.pollingEnabled = false
+		m.pollingCancel()
+		m.pollingCancel = nil
+		for _, pollMan := range m.NetworkPollManagers {
+			pollMan.StopPolling()
+		}
+		m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, 0)
+	}
+	m.running = false
+	m.fault = false
+	return nil
 }
