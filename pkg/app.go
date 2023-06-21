@@ -12,6 +12,7 @@ import (
 	"github.com/NubeIO/rubix-os/utils/float"
 	"github.com/NubeIO/rubix-os/utils/writemode"
 	"go.bug.st/serial"
+	"strings"
 	"time"
 )
 
@@ -545,15 +546,15 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 	return point, nil
 }
 
-func (m *Module) deleteNetwork(body *model.Network) (ok bool, err error) {
-	m.modbusDebugMsg("deleteNetwork(): ", body.UUID)
-	if body == nil {
-		m.modbusDebugMsg("deleteNetwork(): nil network object")
+func (m *Module) deleteNetwork(uuid string) (ok bool, err error) {
+	m.modbusDebugMsg("deleteNetwork(): ", uuid)
+	if len(strings.TrimSpace(uuid)) == 0 {
+		m.modbusDebugMsg("deleteNetwork(): uuid is empty")
 		return
 	}
 	found := false
 	for index, netPollMan := range m.NetworkPollManagers {
-		if netPollMan.FFNetworkUUID == body.UUID {
+		if netPollMan.FFNetworkUUID == uuid {
 			netPollMan.StopPolling()
 			// Next remove the NetworkPollManager from the slice in polling instance
 			m.NetworkPollManagers[index] = m.NetworkPollManagers[len(m.NetworkPollManagers)-1]
@@ -562,9 +563,9 @@ func (m *Module) deleteNetwork(body *model.Network) (ok bool, err error) {
 		}
 	}
 	if !found {
-		m.modbusDebugMsg("deleteNetwork(): cannot find NetworkPollManager for network: ", body.UUID)
+		m.modbusDebugMsg("deleteNetwork(): cannot find NetworkPollManager for network: ", uuid)
 	}
-	err = m.grpcMarshaller.DeleteNetwork(body.UUID)
+	err = m.grpcMarshaller.DeleteNetwork(uuid)
 	if err != nil {
 		return false, err
 	}

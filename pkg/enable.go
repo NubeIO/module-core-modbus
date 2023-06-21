@@ -8,6 +8,8 @@ import (
 func (m *Module) Enable() error {
 	m.enabled = true
 	m.fault = false
+	// m.pluginName = name // TODO: Check this
+	// m.setUUID()
 
 	nets, err := m.grpcMarshaller.GetNetworksByPluginName(name, "")
 	if err != nil {

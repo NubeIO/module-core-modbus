@@ -48,7 +48,7 @@ func (m *Module) GetInfo() (*shared.Info, error) {
 
 func NewPollManager(
 	conf *pollqueue.Config,
-	dbHelper shared.DBHelper, // TODO: Check this
+	dbHelper *shared.DBHelper, // TODO: Check this
 	ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string,
 	maxPollRate float64,
 ) *pollqueue.NetworkPollManager {

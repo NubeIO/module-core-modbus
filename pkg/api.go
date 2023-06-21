@@ -15,6 +15,35 @@ const (
 	jsonSchemaPoint   = "/schema/json/point"
 )
 
+type Scan struct {
+	Start  uint32 `json:"start"`
+	Count  uint32 `json:"count"`
+	IsCoil bool   `json:"is_coil"`
+}
+
+type Body struct {
+	Network       *model.Network
+	Device        *model.Device
+	Point         *model.Point
+	Client        `json:"client"`
+	Operation     `json:"request_body"`
+	Scan          `json:"scan"`
+	ReturnArray   bool  `json:"return_array"`
+	IsSerial      bool  `json:"is_serial"`
+	DeviceAddress uint8 `json:"device_address"`
+}
+
+type wizard struct {
+	IP            string `json:"ip"`
+	Port          int    `json:"port"`
+	SerialPort    string `json:"serial_port"`
+	BaudRate      uint   `json:"baud_rate"`
+	DeviceAddr    uint   `json:"device_addr"`
+	WizardVersion uint   `json:"wizard_version"`
+	NameArg       string `json:"name_arg"`
+	AddArg        uint   `json:"add_arg"`
+}
+
 func (m *Module) Get(path string) ([]byte, error) {
 	if path == jsonSchemaNetwork {
 		fns, err := m.grpcMarshaller.GetFlowNetworks("")
@@ -28,6 +57,12 @@ func (m *Module) Get(path string) ([]byte, error) {
 		return json.Marshal(modbuschema.GetDeviceSchema())
 	} else if path == jsonSchemaPoint {
 		return json.Marshal(modbuschema.GetPointSchema())
+	} else if path == listSerial {
+		serial, err := m.listSerialPorts()
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(serial)
 	}
 	return nil, errors.New("not found")
 }
@@ -44,21 +79,103 @@ func (m *Module) Post(path string, body []byte) ([]byte, error) {
 			return nil, err
 		}
 		return json.Marshal(net)
+	} else if path == common.DevicesURL {
+		var device *model.Device
+		err := json.Unmarshal(body, &device)
+		if err != nil {
+			return nil, err
+		}
+		dev, err := m.addDevice(device)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(dev)
+	} else if path == common.PointsURL {
+		var point *model.Point
+		err := json.Unmarshal(body, &point)
+		if err != nil {
+			return nil, err
+		}
+		pnt, err := m.addPoint(point)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(pnt)
 	}
 	return nil, errors.New("not found")
 }
 
 func (m *Module) Put(path, uuid string, body []byte) ([]byte, error) {
-	// TODO implement me
-	panic("implement me")
+	return nil, errors.New("not found")
 }
 
 func (m *Module) Patch(path, uuid string, body []byte) ([]byte, error) {
-	// TODO implement me
-	panic("implement me")
+	if path == common.NetworksURL {
+		var network *model.Network
+		err := json.Unmarshal(body, &network)
+		if err != nil {
+			return nil, err
+		}
+		net, err := m.updateNetwork(network)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(net)
+	} else if path == common.DevicesURL {
+		var device *model.Device
+		err := json.Unmarshal(body, &device)
+		if err != nil {
+			return nil, err
+		}
+		dev, err := m.updateDevice(device)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(dev)
+	} else if path == common.PointsURL {
+		var point *model.Point
+		err := json.Unmarshal(body, &point)
+		if err != nil {
+			return nil, err
+		}
+		pnt, err := m.updatePoint(point)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(pnt)
+	} else if path == common.PointsWriteURL {
+		var pw *model.PointWriter
+		err := json.Unmarshal(body, &pw)
+		if err != nil {
+			return nil, err
+		}
+		pnt, err := m.writePoint(uuid, pw)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(pnt)
+	}
+	return nil, errors.New("not found")
 }
 
 func (m *Module) Delete(path, uuid string) ([]byte, error) {
-	// TODO implement me
-	panic("implement me")
+	if path == common.NetworksURL {
+		_, err := m.deleteNetwork(uuid)
+		return nil, err
+	} else if path == common.DevicesURL {
+		dev, err := m.grpcMarshaller.GetDevice(uuid, "")
+		if err != nil {
+			return nil, err
+		}
+		_, err = m.deleteDevice(dev)
+		return nil, err
+	} else if path == common.PointsURL {
+		pnt, err := m.grpcMarshaller.GetPoint(uuid, "")
+		if err != nil {
+			return nil, err
+		}
+		_, err = m.deletePoint(pnt)
+		return nil, err
+	}
+	return nil, errors.New("not found")
 }
