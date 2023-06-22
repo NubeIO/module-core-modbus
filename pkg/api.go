@@ -3,7 +3,9 @@ package pkg
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/NubeIO/lib-schema/modbuschema"
+	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
 	"github.com/NubeIO/rubix-os/module/common"
 )
@@ -13,6 +15,9 @@ const (
 	jsonSchemaNetwork = "/schema/json/network"
 	jsonSchemaDevice  = "/schema/json/device"
 	jsonSchemaPoint   = "/schema/json/point"
+	pointOperation    = "/modbus/point/operation"
+	wizardTcp         = "/modbus/wizard/tcp"
+	wizardSerial      = "/modbus/wizard/serial"
 )
 
 type Scan struct {
@@ -101,6 +106,59 @@ func (m *Module) Post(path string, body []byte) ([]byte, error) {
 			return nil, err
 		}
 		return json.Marshal(pnt)
+	} else if path == pointOperation {
+		var dto Body
+		err := json.Unmarshal(body, &dto)
+		if err != nil {
+			return nil, err
+		}
+		netType := dto.Network.TransportType
+		mbClient, err := m.setClient(dto.Network, dto.Device, false)
+		if err != nil {
+			m.modbusErrorMsg(err, "ERROR ON set modbus client")
+			return nil, err
+		}
+		if netType == model.TransType.Serial || netType == model.TransType.LoRa {
+			if dto.Device.AddressId >= 1 {
+				mbClient.RTUClientHandler.SlaveID = byte(dto.Device.AddressId)
+			}
+		} else if netType == model.TransType.IP {
+			url, err := uurl.JoinIpPort(dto.Device.Host, dto.Device.Port)
+			if err != nil {
+				m.modbusErrorMsg(fmt.Sprintf("failed to validate device IP %s\n", url))
+				return nil, err
+			}
+			mbClient.TCPClientHandler.Address = url
+			mbClient.TCPClientHandler.SlaveID = byte(dto.Device.AddressId)
+		}
+		_, responseValue, err := m.networkRequest(mbClient, dto.Point, false)
+		if err != nil {
+			return nil, err
+		}
+		m.modbusDebugMsg("responseValue", responseValue)
+		return json.Marshal(responseValue)
+	} else if path == wizardTcp {
+		var dto wizard
+		err := json.Unmarshal(body, &dto)
+		if err != nil {
+			return nil, err
+		}
+		n, err := m.wizardTCP(dto)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(n)
+	} else if path == wizardSerial {
+		var dto wizard
+		err := json.Unmarshal(body, &dto)
+		if err != nil {
+			return nil, err
+		}
+		serial, err := m.wizardSerial(dto)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(serial)
 	}
 	return nil, errors.New("not found")
 }
