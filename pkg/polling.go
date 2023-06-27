@@ -8,7 +8,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	"github.com/NubeIO/rubix-os/services/pollqueue"
+	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/src/poller"
 	"github.com/NubeIO/rubix-os/utils/boolean"
 	"github.com/NubeIO/rubix-os/utils/float"
@@ -109,7 +109,7 @@ func (m *Module) ModbusPolling() error {
 			}
 			if boolean.IsFalse(dev.Enable) {
 				m.modbusErrorMsg("device is disabled.")
-				m.grpcMarshaller.SetErrorsForAllPointsOnDevice( // TODO: Check this
+				m.grpcMarshaller.SetErrorsForAllPointsOnDevice(
 					dev.UUID,
 					"device disabled",
 					model.MessageLevel.Warning,

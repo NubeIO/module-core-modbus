@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
 	"github.com/NubeIO/rubix-os/module/shared"
-	"github.com/NubeIO/rubix-os/services/pollqueue"
+	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/patrickmn/go-cache"
 	"time"
 )
 
 type Module struct {
-	// bus                 eventbus.BusService
 	basePath            string
 	config              *Config
 	dbHelper            shared.DBHelper
@@ -48,7 +47,7 @@ func (m *Module) GetInfo() (*shared.Info, error) {
 
 func NewPollManager(
 	conf *pollqueue.Config,
-	dbHelper *shared.DBHelper, // TODO: Check this
+	marshaller shared.Marshaller,
 	ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string,
 	maxPollRate float64,
 ) *pollqueue.NetworkPollManager {
@@ -87,7 +86,7 @@ func NewPollManager(
 	pm.Config = conf
 	pm.PollQueue = npq
 	pm.PluginQueueUnloader = nil
-	pm.DBHandlerRef = dbHelper // TODO: Check this
+	pm.Marshaller = marshaller
 	pm.MaxPollRate, _ = time.ParseDuration(fmt.Sprintf("%fs", maxPollRate))
 	pm.FFNetworkUUID = ffNetworkUUID
 	pm.NetworkName = ffNetworkName

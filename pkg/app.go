@@ -6,7 +6,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	"github.com/NubeIO/rubix-os/services/pollqueue"
+	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/utils/array"
 	"github.com/NubeIO/rubix-os/utils/boolean"
 	"github.com/NubeIO/rubix-os/utils/float"
@@ -17,6 +17,7 @@ import (
 )
 
 var name = "module-core-modbus"
+var path = "modbus"
 
 func (m *Module) addNetwork(body *model.Network) (network *model.Network, err error) {
 	m.modbusDebugMsg("addNetwork(): ", body.Name)
@@ -36,7 +37,7 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 		}
 		pollManager := NewPollManager(
 			&pollQueueConfig,
-			m.dbHelper, // TODO: Check this
+			m.grpcMarshaller,
 			network.UUID,
 			network.Name,
 			m.pluginUUID,
@@ -52,7 +53,7 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 			model.MessageLevel.Warning,
 			model.CommonFaultCode.NetworkError,
 		)
-		err = m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork( // TODO: Check this
+		err = m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork(
 			network.UUID,
 			"network disabled",
 			model.MessageLevel.Warning,
@@ -203,7 +204,7 @@ func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err
 	if boolean.IsFalse(network.Enable) && netPollMan.Enable == true {
 		// DO POLLING DISABLE ACTIONS
 		netPollMan.StopPolling()
-		m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork( // TODO: Check this
+		m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork(
 			network.UUID,
 			"network disabled",
 			model.MessageLevel.Warning,
@@ -216,7 +217,7 @@ func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err
 		}
 		// DO POLLING Enable ACTIONS
 		netPollMan.StartPolling()
-		m.grpcMarshaller.ClearErrorsForAllDevicesOnNetwork(network.UUID, true) // TODO: Check this
+		m.grpcMarshaller.ClearErrorsForAllDevicesOnNetwork(network.UUID, true)
 	}
 
 	network, err = m.grpcMarshaller.UpdateNetwork(body.UUID, network)
@@ -266,7 +267,7 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 	}
 	if boolean.IsFalse(device.Enable) && netPollMan.PollQueue.CheckIfActiveDevicesListIncludes(device.UUID) {
 		// DO POLLING DISABLE ACTIONS FOR DEVICE
-		m.grpcMarshaller.SetErrorsForAllPointsOnDevice( // TODO: Check this
+		m.grpcMarshaller.SetErrorsForAllPointsOnDevice(
 			device.UUID,
 			"device disabled",
 			model.MessageLevel.Warning,
@@ -276,7 +277,7 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 
 	} else if boolean.IsTrue(device.Enable) && !netPollMan.PollQueue.CheckIfActiveDevicesListIncludes(device.UUID) {
 		// DO POLLING ENABLE ACTIONS FOR DEVICE
-		err = m.grpcMarshaller.ClearErrorsForAllPointsOnDevice(device.UUID) // TODO: Check this
+		err = m.grpcMarshaller.ClearErrorsForAllPointsOnDevice(device.UUID)
 		if err != nil {
 			m.modbusDebugMsg("updateDevice(): error on ClearErrorsForAllPointsOnDevice(): ", err)
 		}
@@ -397,10 +398,10 @@ func (m *Module) updatePoint(body *model.Point) (point *model.Point, err error) 
 	if boolean.IsTrue(point.Enable) && boolean.IsTrue(dev.Enable) {
 		netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
 		// DO POLLING ENABLE ACTIONS FOR POINT
-		// TODO: review these steps to check that UpdatePollingPointByUUID might work better?
+		// TODO: Review these steps to check that UpdatePollingPointByUUID might work better?
 		pp := pollqueue.NewPollingPoint(point.UUID, point.DeviceUUID, dev.NetworkUUID, netPollMan.FFPluginUUID)
 		// This will perform the queue re-add actions based on Point WriteMode.
-		// TODO: check function of pointUpdate argument.
+		// TODO: Check function of pointUpdate argument.
 		netPollMan.PollingPointCompleteNotification(
 			pp,
 			false,
@@ -513,7 +514,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 			// pp.PollPriority = model.PRIORITY_ASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
 
 			// This will perform the queue re-add actions based on Point WriteMode.
-			// TODO: check function of pointUpdate argument.
+			// TODO: Check function of pointUpdate argument.
 			netPollMan.PollingPointCompleteNotification(
 				pp,
 				false,
@@ -532,7 +533,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 			/*
 				netPollMan.PollQueue.RemovePollingPointByPointUUID(body.UUID)
 				//DO POLLING ENABLE ACTIONS FOR POINT
-				//TODO: review these steps to check that UpdatePollingPointByUUID might work better?
+				// TODO: Review these steps to check that UpdatePollingPointByUUID might work better?
 				pp := pollqueue.NewPollingPoint(body.UUID, body.DeviceUUID, dev.NetworkUUID, netPollMan.FFPluginUUID)
 				netPollMan.PollingPointCompleteNotification(pp, false, false, 0, true, true) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
 				//netPollMan.PollQueue.AddPollingPoint(pp)

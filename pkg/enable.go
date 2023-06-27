@@ -1,15 +1,15 @@
 package pkg
 
 import (
-	"github.com/NubeIO/rubix-os/services/pollqueue"
+	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/utils/float"
 )
 
 func (m *Module) Enable() error {
 	m.enabled = true
 	m.fault = false
-	// m.pluginName = name // TODO: Check this
-	// m.setUUID()
+	m.moduleName = name
+	m.setUUID()
 
 	nets, err := m.grpcMarshaller.GetNetworksByPluginName(name, "")
 	if err != nil {
@@ -32,14 +32,14 @@ func (m *Module) Enable() error {
 				pollQueueConfig := pollqueue.Config{EnablePolling: conf.EnablePolling, LogLevel: conf.PollQueueLogLevel}
 				pollManager := NewPollManager(
 					&pollQueueConfig,
-					&m.dbHelper, // TODO: Check this
+					m.grpcMarshaller,
 					net.UUID,
 					net.Name,
 					m.pluginUUID,
 					m.moduleName,
 					float.NonNil(net.MaxPollRate),
 				)
-				pollManager.StartPolling() // TODO: Check this
+				pollManager.StartPolling()
 				m.NetworkPollManagers = append(m.NetworkPollManagers, pollManager)
 			}
 			m.running = true

@@ -11,13 +11,14 @@ import (
 )
 
 const (
-	listSerial        = "/list/serial"
-	jsonSchemaNetwork = "/schema/json/network"
-	jsonSchemaDevice  = "/schema/json/device"
-	jsonSchemaPoint   = "/schema/json/point"
-	pointOperation    = "/modbus/point/operation"
-	wizardTcp         = "/modbus/wizard/tcp"
-	wizardSerial      = "/modbus/wizard/serial"
+	listSerial          = "/list/serial"
+	jsonSchemaNetwork   = "/schema/json/network"
+	jsonSchemaDevice    = "/schema/json/device"
+	jsonSchemaPoint     = "/schema/json/point"
+	pointOperation      = "/modbus/point/operation"
+	wizardTcp           = "/modbus/wizard/tcp"
+	wizardSerial        = "/modbus/wizard/serial"
+	networkPollingStats = "/polling/stats/network/:name"
 )
 
 type Scan struct {
