@@ -52,13 +52,7 @@ type wizard struct {
 
 func (m *Module) Get(path string) ([]byte, error) {
 	if path == jsonSchemaNetwork {
-		fns, err := m.grpcMarshaller.GetFlowNetworks("")
-		if err != nil {
-			return nil, err
-		}
-		networkSchema := modbuschema.GetNetworkSchema()
-		networkSchema.AutoMappingFlowNetworkName.Options = common.GetFlowNetworkNames(fns)
-		return json.Marshal(networkSchema)
+		return json.Marshal(modbuschema.GetNetworkSchema())
 	} else if path == jsonSchemaDevice {
 		return json.Marshal(modbuschema.GetDeviceSchema())
 	} else if path == jsonSchemaPoint {
