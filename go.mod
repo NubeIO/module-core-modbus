@@ -1,6 +1,6 @@
 module github.com/NubeIO/module-core-modbus
 
-go 1.20
+go 1.18
 
 replace github.com/NubeIO/rubix-os => /Users/i8e4/CodeDuo/NubeIO/rubix-os
 
