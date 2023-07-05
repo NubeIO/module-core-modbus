@@ -687,3 +687,17 @@ func (m *Module) listSerialPorts() (*array.Array, error) {
 	}
 	return p, err
 }
+
+func (m *Module) getPollingStats(networkName string) (result *model.PollQueueStatistics, error error) {
+	if len(m.NetworkPollManagers) == 0 {
+		return nil, errors.New("couldn't find any plugin network poll managers")
+	}
+	for _, netPollMan := range m.NetworkPollManagers {
+		if netPollMan == nil || netPollMan.NetworkName != networkName {
+			continue
+		}
+		result = netPollMan.GetPollingQueueStatistics()
+		return result, nil
+	}
+	return nil, errors.New(fmt.Sprintf("couldn't find network %s for polling statistics", networkName))
+}

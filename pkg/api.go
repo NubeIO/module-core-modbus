@@ -9,6 +9,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
 	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/module/common"
+	"strings"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 	pointOperation      = "/modbus/point/operation"
 	wizardTcp           = "/modbus/wizard/tcp"
 	wizardSerial        = "/modbus/wizard/serial"
-	networkPollingStats = "/polling/stats/network/:name"
+	networkPollingStats = "/polling/stats/network/"
 )
 
 type Scan struct {
@@ -64,6 +65,13 @@ func (m *Module) Get(path string) ([]byte, error) {
 			return nil, err
 		}
 		return json.Marshal(serial)
+	} else if strings.Contains(path, networkPollingStats) {
+		name := strings.TrimPrefix(path, networkPollingStats)
+		stats, err := m.getPollingStats(name)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(stats)
 	}
 	return nil, errors.New("not found")
 }
