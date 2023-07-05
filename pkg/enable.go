@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/utils/float"
 )
@@ -11,7 +12,7 @@ func (m *Module) Enable() error {
 	m.moduleName = name
 	m.setUUID()
 
-	nets, err := m.grpcMarshaller.GetNetworksByPluginName(name, "")
+	nets, err := m.grpcMarshaller.GetNetworksByPluginName(name, argspkg.Args{})
 	if err != nil {
 		m.networks = nil
 	} else if nets != nil {

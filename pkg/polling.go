@@ -8,6 +8,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/src/poller"
 	"github.com/NubeIO/rubix-os/utils/boolean"
@@ -59,7 +60,7 @@ func (m *Module) ModbusPolling() error {
 
 			pollStartTime := time.Now()
 
-			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, "")
+			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, argspkg.Args{})
 			if err != nil || net == nil || net.PluginConfId != m.pluginUUID {
 				m.modbusDebugMsg("MODBUS NETWORK NOT FOUND")
 				continue
@@ -92,7 +93,7 @@ func (m *Module) ModbusPolling() error {
 			netPollMan.PrintPollQueuePointUUIDs()
 			netPollMan.PrintPollingPointDebugInfo(pp)
 
-			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, "")
+			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, argspkg.Args{})
 			if dev == nil || err != nil {
 				m.modbusErrorMsg("could not find deviceID:", pp.FFDeviceUUID)
 				netPollMan.PollingFinished(
@@ -148,7 +149,7 @@ func (m *Module) ModbusPolling() error {
 				continue
 			}
 
-			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, "")
+			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, argspkg.Args{})
 			if pnt == nil || err != nil {
 				m.modbusErrorMsg("could not find pointID: ", pp.FFPointUUID)
 				netPollMan.PollingFinished(
@@ -186,7 +187,6 @@ func (m *Module) ModbusPolling() error {
 				continue
 			}
 
-			m.modbusPollingMsg("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
 			m.modbusPollingMsg(fmt.Sprintf("NEXT POLL DRAWN! : Network: %s, Device: %s, Point: %s, Priority: %s, Device-Add: %d, Point-Add: %d, Point Type: %s, WriteRequired: %t, ReadRequired: %t", net.Name, dev.Name, pnt.Name, pnt.PollPriority, dev.AddressId, *pnt.AddressID, pnt.ObjectType, boolean.IsTrue(pnt.WritePollRequired), boolean.IsTrue(pnt.ReadPollRequired)))
 
 			if boolean.IsFalse(pnt.WritePollRequired) && boolean.IsFalse(pnt.ReadPollRequired) {
@@ -326,7 +326,7 @@ func (m *Module) ModbusPolling() error {
 
 					m.modbusPollingMsg(fmt.Sprintf("WRITE-RESPONSE: responseValue %f, point UUID: %s, response: %+v", writeResponseValue, pnt.UUID, writeResponse))
 				} else {
-					writeSuccess = true // Successful because there is no value to write.  Otherwise the point will short cycle.
+					writeSuccess = true // Successful because there is no value to write. Otherwise, the point will short cycle.
 					m.modbusDebugMsg("modbus write point error: no value in priority array to write")
 				}
 			}

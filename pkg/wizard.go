@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/utils/boolean"
 	"github.com/NubeIO/rubix-os/utils/float"
 	"github.com/NubeIO/rubix-os/utils/integer"
@@ -257,7 +258,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 	case 5:
 		if body.NameArg != "" && body.AddArg > 0 {
 			networkName := "CliniMix-TMV"
-			net, err := m.grpcMarshaller.GetNetworkByName(networkName, "")
+			net, err := m.grpcMarshaller.GetNetworkByName(networkName, argspkg.Args{})
 			if err != nil || net == nil {
 				if net == nil {
 					net = &model.Network{}

@@ -7,6 +7,7 @@ import (
 	"github.com/NubeIO/lib-schema/modbuschema"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/module/common"
 )
 
@@ -216,14 +217,14 @@ func (m *Module) Delete(path, uuid string) ([]byte, error) {
 		_, err := m.deleteNetwork(uuid)
 		return nil, err
 	} else if path == common.DevicesURL {
-		dev, err := m.grpcMarshaller.GetDevice(uuid, "")
+		dev, err := m.grpcMarshaller.GetDevice(uuid, argspkg.Args{})
 		if err != nil {
 			return nil, err
 		}
 		_, err = m.deleteDevice(dev)
 		return nil, err
 	} else if path == common.PointsURL {
-		pnt, err := m.grpcMarshaller.GetPoint(uuid, "")
+		pnt, err := m.grpcMarshaller.GetPoint(uuid, argspkg.Args{})
 		if err != nil {
 			return nil, err
 		}

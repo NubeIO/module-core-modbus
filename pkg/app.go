@@ -6,6 +6,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	argspkg "github.com/NubeIO/rubix-os/args"
 	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/utils/array"
 	"github.com/NubeIO/rubix-os/utils/boolean"
@@ -120,7 +121,7 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	}
 	m.modbusDebugMsg(fmt.Sprintf("addPoint(): %+v\n", point))
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, "")
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return nil, err
@@ -254,7 +255,7 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 	}
 
 	if boolean.IsTrue(device.Enable) { // If Enabled we need to GetDevice so we get Points
-		device, err = m.grpcMarshaller.GetDevice(device.UUID, "")
+		device, err = m.grpcMarshaller.GetDevice(device.UUID, argspkg.Args{})
 		if err != nil || device == nil {
 			return nil, err
 		}
@@ -377,7 +378,7 @@ func (m *Module) updatePoint(body *model.Point) (point *model.Point, err error) 
 		return nil, err
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, "")
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
 	if err != nil || dev == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from GetDevice()")
 		return nil, err
@@ -437,7 +438,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 	}
 	point = &pnt.Point
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, "")
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("writePoint(): bad response from GetDevice()")
 		return nil, err
@@ -601,7 +602,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 		return
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, "")
+	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, argspkg.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return false, err
