@@ -34,8 +34,8 @@ func (m *Module) ValidateAndSetConfig(config []byte) ([]byte, error) {
 		logLevel = log.ErrorLevel
 	}
 	logger.SetLogger(logLevel)
-
 	newConfig.LogLevel = strings.ToUpper(logLevel.String())
+
 	newConfValid, err := yaml.Marshal(newConfig)
 	if err != nil {
 		return nil, err
