@@ -1,4 +1,4 @@
-package module_core_modbus
+package main
 
 import (
 	"github.com/NubeIO/module-core-modbus/pkg"

@@ -7,7 +7,7 @@ replace github.com/NubeIO/rubix-os => /Users/i8e4/CodeDuo/NubeIO/rubix-os
 require (
 	github.com/NubeIO/lib-schema v0.2.18
 	github.com/NubeIO/nubeio-rubix-lib-helpers-go v0.2.7
-	github.com/NubeIO/nubeio-rubix-lib-models-go v1.7.5
+	github.com/NubeIO/nubeio-rubix-lib-models-go v1.7.6
 	github.com/NubeIO/rubix-os v0.0.1-rc3
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/grid-x/modbus v0.0.0-20220829110112-006eee73392e
