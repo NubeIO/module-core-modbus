@@ -37,7 +37,7 @@ func (m *Module) Init(dbHelper shared.DBHelper, moduleName string) error {
 
 func (m *Module) GetInfo() (*shared.Info, error) {
 	return &shared.Info{
-		Name:       name,
+		Name:       m.moduleName,
 		Author:     "Nube iO",
 		Website:    "https://nube-io.com",
 		License:    "N/A",
