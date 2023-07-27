@@ -17,7 +17,6 @@ import (
 	"time"
 )
 
-var name = "module-core-modbus"
 var path = "modbus"
 
 func (m *Module) addNetwork(body *model.Network) (network *model.Network, err error) {

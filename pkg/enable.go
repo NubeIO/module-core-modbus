@@ -9,10 +9,9 @@ import (
 func (m *Module) Enable() error {
 	m.enabled = true
 	m.fault = false
-	m.moduleName = name
 	m.setUUID()
 
-	nets, err := m.grpcMarshaller.GetNetworksByPluginName(name, argspkg.Args{})
+	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName, argspkg.Args{})
 	if err != nil {
 		m.networks = nil
 	} else if nets != nil {
