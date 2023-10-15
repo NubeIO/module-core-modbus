@@ -7,6 +7,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
 	argspkg "github.com/NubeIO/rubix-os/args"
+	"github.com/NubeIO/rubix-os/interfaces"
 	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
 	"github.com/NubeIO/rubix-os/utils/array"
 	"github.com/NubeIO/rubix-os/utils/boolean"
@@ -244,7 +245,6 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 		body.CommonFault.InFault = false
 		body.CommonFault.MessageLevel = model.MessageLevel.Info
 		body.CommonFault.MessageCode = model.CommonFaultCode.Ok
-		body.CommonFault.Message = ""
 		body.CommonFault.LastOk = time.Now().UTC()
 	}
 
@@ -631,15 +631,21 @@ func (m *Module) pointUpdate(point *model.Point, value float64, readSuccess bool
 	if readSuccess {
 		point.OriginalValue = float.New(value)
 	}
-	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point)
+	opts := interfaces.UpdatePointOpts{
+		WriteValue: true,
+	}
+	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, opts)
 	if err != nil {
-		m.modbusDebugMsg("MODBUS UPDATE POINT UpdatePointPresentValue() error: ", err)
+		m.modbusDebugMsg("MODBUS UPDATE POINT pointUpdate() error: ", err)
 		return nil, err
 	}
 	return point, nil
 }
 
 func (m *Module) pointUpdateErr(point *model.Point, message string, messageLevel string, messageCode string) error {
+	if point == nil {
+		return errors.New("point body can not be empty")
+	}
 	point.CommonFault.InFault = true
 	point.CommonFault.MessageLevel = messageLevel
 	point.CommonFault.MessageCode = messageCode
@@ -665,11 +671,24 @@ func (m *Module) deviceUpdateErr(device *model.Device, message string, messageLe
 	return err
 }
 
+func (m *Module) networkUpdateMessage(network *model.Network, message string, messageLevel string, messageCode string) error {
+	network.CommonFault.InFault = false
+	network.CommonFault.MessageLevel = messageLevel
+	network.CommonFault.MessageCode = messageCode
+	network.CommonFault.Message = fmt.Sprintf("%s", message)
+	network.CommonFault.LastOk = time.Now().UTC()
+	_, err := m.grpcMarshaller.UpdateNetwork(network.UUID, network)
+	if err != nil {
+		m.modbusErrorMsg(" networkUpdate()", err)
+	}
+	return err
+}
+
 func (m *Module) networkUpdateErr(network *model.Network, message string, messageLevel string, messageCode string) error {
 	network.CommonFault.InFault = true
 	network.CommonFault.MessageLevel = messageLevel
 	network.CommonFault.MessageCode = messageCode
-	network.CommonFault.Message = fmt.Sprintf("modbus: %s", message)
+	network.CommonFault.Message = fmt.Sprintf("%s", message)
 	network.CommonFault.LastFail = time.Now().UTC()
 	err := m.grpcMarshaller.UpdateNetworkErrors(network.UUID, network)
 	if err != nil {

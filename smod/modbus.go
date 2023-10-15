@@ -110,6 +110,10 @@ func (mc *ModbusClient) ReadInputRegisters(addr uint16, quantity uint16, dataTyp
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
+	case string(model.TypeMod10_u32):
+		// decode payload bytes as uint16s, then do R2*10,000 + R1
+		decode := bytesToMod10_u32(mc.Endianness, mc.WordOrder, raw)
+		out = decode[0]
 	default:
 		// Decode payload bytes as uint16s
 		decode := bytesToUint16s(mc.Endianness, raw)
@@ -165,6 +169,10 @@ func (mc *ModbusClient) ReadHoldingRegisters(addr uint16, quantity uint16, dataT
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
+	case string(model.TypeMod10_u32):
+		// decode payload bytes as uint16s, then do R2*10,000 + R1
+		decode := bytesToMod10_u32(mc.Endianness, mc.WordOrder, raw)
+		out = decode[0]
 	default:
 		// Decode payload bytes as uint16s
 		decode := bytesToUint16s(mc.Endianness, raw)

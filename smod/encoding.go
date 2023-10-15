@@ -2,6 +2,7 @@ package smod
 
 import (
 	"encoding/binary"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"math"
 )
@@ -242,6 +243,31 @@ func bytesToFloat64s(endianness Endianness, wordOrder WordOrder, in []byte) (out
 
 func float64ToBytes(endianness Endianness, wordOrder WordOrder, in float64) (out []byte) {
 	out = uint64ToBytes(endianness, wordOrder, math.Float64bits(in))
+	return
+}
+
+func bytesToMod10_u32(endianness Endianness, wordOrder WordOrder, in []byte) (out []float64) {
+	uint16Array := make([]uint16, 0)
+	// ensure that there are a compatible number of bytes
+	if math.Mod(float64(len(in)), 4) != 0 {
+		fmt.Println("MODBUS CONVERSION ERROR bytesToMod10_u32(): length of input []byte is less than 4")
+		return []float64{float64(0)}
+	}
+
+	// loop through the bytes to get Uint16s (register 1 and register 2)
+	for i := 0; i < len(in); i += 2 {
+		uint16Array = append(uint16Array, bytesToUint16(endianness, in[i:i+2]))
+	}
+
+	// now apply the word order and Mod10 conversion function (R2*10,000 + R1)
+	resultNum := float64(0)
+	if wordOrder == HighWordFirst {
+		resultNum = (float64(uint16Array[0]) * 10000) + (float64(uint16Array[1]))
+		out = append(out, resultNum)
+	} else {
+		resultNum = (float64(uint16Array[1]) * 10000) + (float64(uint16Array[0]))
+		out = append(out, resultNum)
+	}
 	return
 }
 

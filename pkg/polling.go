@@ -13,8 +13,10 @@ import (
 	"github.com/NubeIO/rubix-os/src/poller"
 	"github.com/NubeIO/rubix-os/utils/boolean"
 	"github.com/NubeIO/rubix-os/utils/float"
+	"github.com/NubeIO/rubix-os/utils/integer"
 	"github.com/NubeIO/rubix-os/utils/nurl"
 	"github.com/NubeIO/rubix-os/utils/writemode"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"strconv"
 	"time"
@@ -38,6 +40,26 @@ func (m *Module) getNetworkPollManagerByUUID(netUUID string) (*pollqueue.Network
 		}
 	}
 	return nil, errors.New("modbus getNetworkPollManagerByUUID(): couldn't find NetworkPollManager")
+}
+
+func (m *Module) updateNetworkMessage(network *model.Network, message string, err error, loopCount int) {
+	if err != nil {
+		err = m.networkUpdateErr(network, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.NetworkError)
+		if err != nil {
+			log.Errorf("modbus failed to update network err: %s", err)
+		}
+	} else {
+		err = m.networkUpdateMessage(network, fmt.Sprintf("%s poll count: %d", message, loopCount), model.MessageLevel.Normal, model.CommonFaultCode.Ok)
+		if err != nil {
+			log.Errorf("modbus failed to update network err: %s", err)
+		}
+	}
+
+}
+
+func TimeStamp() (hostTime string) {
+	hostTime = time.Now().Format(time.Stamp)
+	return
 }
 
 func (m *Module) ModbusPolling() error {
@@ -187,7 +209,20 @@ func (m *Module) ModbusPolling() error {
 				continue
 			}
 
-			m.modbusPollingMsg(fmt.Sprintf("NEXT POLL DRAWN! : Network: %s, Device: %s, Point: %s, Priority: %s, Device-Add: %d, Point-Add: %d, Point Type: %s, WriteRequired: %t, ReadRequired: %t", net.Name, dev.Name, pnt.Name, pnt.PollPriority, dev.AddressId, *pnt.AddressID, pnt.ObjectType, boolean.IsTrue(pnt.WritePollRequired), boolean.IsTrue(pnt.ReadPollRequired)))
+			m.modbusPollingMsg(
+				fmt.Sprintf(
+					"NEXT POLL DRAWN! : Network: %s, Device: %s, Point: %s, Priority: %s, Device-Add: %d, Point-Add: %d, Point Type: %s, WriteRequired: %t, ReadRequired: %t",
+					net.Name,
+					dev.Name,
+					pnt.Name,
+					pnt.PollPriority,
+					dev.AddressId,
+					integer.NonNil(pnt.AddressID),
+					pnt.ObjectType,
+					boolean.IsTrue(pnt.WritePollRequired),
+					boolean.IsTrue(pnt.ReadPollRequired),
+				),
+			)
 
 			if boolean.IsFalse(pnt.WritePollRequired) && boolean.IsFalse(pnt.ReadPollRequired) {
 				m.modbusDebugMsg("polling not required on this point")
@@ -218,6 +253,7 @@ func (m *Module) ModbusPolling() error {
 					}
 					netPollMan.PortUnavailableTimeout = time.AfterFunc(10*time.Second, unpauseFunc)
 				}
+				m.updateNetworkMessage(net, "", err, counter)
 				netPollMan.PollingFinished(
 					pp,
 					pollStartTime,
@@ -237,15 +273,19 @@ func (m *Module) ModbusPolling() error {
 			} else if dev.TransportType == model.TransType.IP {
 				url, err := nurl.JoinIPPort(nurl.Parts{Host: dev.Host, Port: strconv.Itoa(dev.Port)})
 				if err != nil {
-					m.modbusErrorMsg("failed to validate device IP", url)
+					errMes := fmt.Sprintf("failed to validate network IP: %s", url)
+					m.modbusErrorMsg(errMes)
 					netPollMan.PollingFinished(pp, pollStartTime, false, false, false, false, pollqueue.DELAYED_RETRY, callback)
+					m.updateNetworkMessage(net, "", errors.New(errMes), counter)
 					continue
 				}
 				mbClient.TCPClientHandler.Address = url
 				mbClient.TCPClientHandler.SlaveID = byte(dev.AddressId)
 			} else {
-				m.modbusDebugMsg(fmt.Sprintf("failed to validate device and network %v %s", err, dev.Name))
+				errMes := fmt.Sprintf("failed to validate device and network %v %s", err, dev.Name)
+				m.modbusDebugMsg(errMes)
 				netPollMan.PollingFinished(pp, pollStartTime, false, false, false, false, pollqueue.DELAYED_RETRY, callback)
+				m.updateNetworkMessage(net, "", errors.New(errMes), counter)
 				continue
 			}
 
@@ -259,6 +299,7 @@ func (m *Module) ModbusPolling() error {
 
 			bitwiseType := boolean.IsTrue(pnt.IsBitwise) && pnt.BitwiseIndex != nil && *pnt.BitwiseIndex >= 0
 
+			// READ POINT
 			readSuccess := false
 			if boolean.IsTrue(pnt.ReadPollRequired) && (boolean.IsFalse(pnt.WritePollRequired) || (bitwiseType && boolean.IsTrue(pnt.WritePollRequired))) { // DO READ IF REQUIRED
 				readResponse, readResponseValue, err = m.networkRead(mbClient, pnt)
@@ -286,6 +327,7 @@ func (m *Module) ModbusPolling() error {
 				m.modbusPollingMsg(fmt.Sprintf("READ-RESPONSE: responseValue %f, point UUID: %s, response: %+v ", readResponseValue, pnt.UUID, readResponse))
 			}
 
+			// WRITE POINT
 			writeSuccess := false
 			if writemode.IsWriteable(pnt.WriteMode) && boolean.IsTrue(pnt.WritePollRequired) { // DO WRITE IF REQUIRED
 				if pnt.WriteValue != nil {
@@ -374,6 +416,20 @@ func (m *Module) ModbusPolling() error {
 			}
 
 			// This callback function triggers the PollManager to evaluate whether the point should be re-added to the PollQueue (Never, Immediately, or after the Poll Rate Delay)
+			if counter == 1 || counter%100 == 0 {
+				deviceMessage := fmt.Sprintf("last 100th poll: %s", TimeStamp())
+				m.updateNetworkMessage(net, deviceMessage, nil, counter)
+				if counter > 100000 {
+					counter = 100
+				}
+				device, err := m.grpcMarshaller.GetDevice(dev.UUID, argspkg.Args{})
+				if err != nil || device == nil {
+					continue
+				}
+				device.Message = deviceMessage
+				device.CommonFault.LastOk = time.Now().UTC()
+				m.grpcMarshaller.UpdateDevice(device.UUID, device)
+			}
 			netPollMan.PollingFinished(pp, pollStartTime, writeSuccess, readSuccess, true, false, pollqueue.NORMAL_RETRY, callback)
 		}
 		return false, nil

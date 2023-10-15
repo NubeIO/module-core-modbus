@@ -44,7 +44,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 		dev.CommonIP.Port = p
 		dev.AddressId = da
 		dev.ZeroMode = boolean.NewTrue()
-		dev.PollDelayPointsMS = 5000
 
 		var pnt model.Point
 		pnt.Name = "modbus"
@@ -79,7 +78,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			dev.CommonIP.Port = p
 			dev.AddressId = j
 			dev.ZeroMode = boolean.NewTrue()
-			dev.PollDelayPointsMS = 5000
 			dev.NetworkUUID = net.UUID
 			_, err := m.grpcMarshaller.CreateDevice(&dev)
 			if err != nil {
@@ -123,7 +121,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			dev.CommonIP.Port = p
 			dev.AddressId = j
 			dev.ZeroMode = boolean.NewTrue()
-			dev.PollDelayPointsMS = 5000
 
 			var pnt model.Point
 			pnt.Name = "Modbus Pnt " + strconv.Itoa(j)
@@ -159,7 +156,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			dev.CommonIP.Port = p
 			dev.AddressId = j
 			dev.ZeroMode = boolean.NewTrue()
-			dev.PollDelayPointsMS = 5000
 			dev.NetworkUUID = net.UUID
 			dev.FastPollRate = float.New(5.0)
 			dev.NormalPollRate = float.New(30.0)
@@ -219,7 +215,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			dev.CommonIP.Port = p
 			dev.AddressId = j
 			dev.ZeroMode = boolean.NewTrue()
-			dev.PollDelayPointsMS = 5000
 			dev.NetworkUUID = net.UUID
 			dev.FastPollRate = float.New(5.0)
 			dev.NormalPollRate = float.New(30.0)
@@ -289,7 +284,6 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 				dev.CommonIP.Port = p
 				dev.AddressId = int(body.AddArg)
 				dev.ZeroMode = boolean.NewTrue()
-				dev.PollDelayPointsMS = 100
 				dev.NetworkUUID = net.UUID
 				dev.FastPollRate = float.New(5.0)
 				dev.NormalPollRate = float.New(30.0)
@@ -688,7 +682,6 @@ func (m *Module) wizardSerial(body wizard) (string, error) {
 	dev.Name = "modbus"
 	dev.AddressId = da
 	dev.ZeroMode = boolean.NewTrue()
-	dev.PollDelayPointsMS = 5000
 
 	var pnt model.Point
 	pnt.Name = "modbus"

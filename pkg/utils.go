@@ -162,7 +162,6 @@ func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (res
 	objectEncoding := pnt.ObjectEncoding                      // beb_lew
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
 	address := pointAddress(pnt, mbClient.DeviceZeroMode)     // register address
-	length := integer.NonNil(pnt.AddressLength)               // modbus register length
 
 	objectType := nstring.NewString(pnt.ObjectType).ToSnakeCase() // eg: readCoil, read_coil, writeCoil
 	objectType = convertOldObjectType(objectType)
@@ -178,9 +177,6 @@ func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (res
 		mbClient.SetEncoding(smod.BigEndian, smod.HighWordFirst)
 	default:
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	}
-	if length <= 0 { // Make sure length is > 0
-		length = 1
 	}
 
 	writeValue := *pnt.WriteValue
@@ -216,6 +212,7 @@ func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (resp
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
 	address := pointAddress(pnt, mbClient.DeviceZeroMode)     // register address
 	length := integer.NonNil(pnt.AddressLength)               // modbus register length
+	length = 1
 
 	objectType := nstring.NewString(pnt.ObjectType).ToSnakeCase() // eg: readCoil, read_coil, writeCoil
 	objectType = convertOldObjectType(objectType)
@@ -232,9 +229,6 @@ func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (resp
 	default:
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
 	}
-	if length <= 0 { // make sure length is > 0
-		length = 1
-	}
 
 	m.modbusDebugMsg(fmt.Sprintf("modbus-read: ObjectType: %s  Addr: %d", objectType, address))
 
@@ -250,29 +244,35 @@ func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (resp
 	// READ INPUT REGISTERS
 	case string(model.ObjTypeInputRegister):
 		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+			length = 1
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) || dataType == string(model.TypeMod10_u32) {
+			length = 2
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
 		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+			length = 4
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
 		} else if dataType == string(model.TypeFloat32) {
 			return mbClient.ReadFloat32(address, smod.InputRegister)
 		} else if dataType == string(model.TypeFloat64) {
-			return mbClient.ReadFloat32(address, smod.InputRegister)
+			return mbClient.ReadFloat64(address, smod.InputRegister)
 		}
 
 	// READ HOLDINGS
 	case string(model.ObjTypeHoldingRegister):
 		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+			length = 1
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) || dataType == string(model.TypeMod10_u32) {
+			length = 2
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
 		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+			length = 4
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
 		} else if dataType == string(model.TypeFloat32) {
 			return mbClient.ReadFloat32(address, smod.HoldingRegister)
 		} else if dataType == string(model.TypeFloat64) {
-			return mbClient.ReadFloat32(address, smod.HoldingRegister)
+			return mbClient.ReadFloat64(address, smod.HoldingRegister)
 		}
 
 	}
