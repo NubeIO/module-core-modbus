@@ -1,7 +1,7 @@
-package modbus
+package schema
 
 import (
-	"github.com/NubeIO/module-core-modbus/schema/schema"
+	"github.com/NubeIO/lib-schema-go/schema"
 )
 
 type DeviceSchema struct {

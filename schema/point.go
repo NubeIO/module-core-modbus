@@ -1,7 +1,7 @@
-package modbus
+package schema
 
 import (
-	"github.com/NubeIO/module-core-modbus/schema/schema"
+	"github.com/NubeIO/lib-schema-go/schema"
 )
 
 type PointSchema struct {
@@ -10,12 +10,12 @@ type PointSchema struct {
 	Description schema.Description `json:"description"`
 	Enable      schema.Enable      `json:"enable"`
 
-	ObjectTypeModbus schema.ObjectTypeModbus `json:"object_type"`
-	DataType         schema.DataType         `json:"data_type"`
-	WriteMode        schema.WriteMode        `json:"write_mode"`
-	AddressId        schema.AddressId        `json:"address_id"`
+	ObjectTypeModbus ObjectTypeModbus `json:"object_type"`
+	DataType         DataType         `json:"data_type"`
+	WriteMode        schema.WriteMode `json:"write_mode"`
+	AddressId        schema.AddressId `json:"address_id"`
 	// AddressLength    schema.AddressLength    `json:"address_length"` // Not needed, we are only reading one of each data type (this is all a point can store)
-	ObjectEncoding schema.ObjectEncoding `json:"object_encoding"`
+	ObjectEncoding ObjectEncoding `json:"object_encoding"`
 
 	PollPriority schema.PollPriority `json:"poll_priority"`
 	PollRate     schema.PollRate     `json:"poll_rate"`

@@ -6,6 +6,7 @@ go 1.18
 
 require (
 	github.com/NubeIO/lib-module-go v0.0.2
+	github.com/NubeIO/lib-schema-go v0.0.1
 	github.com/NubeIO/lib-utils-go v0.0.1
 	github.com/NubeIO/nubeio-rubix-lib-helpers-go v0.2.7
 	github.com/NubeIO/nubeio-rubix-lib-models-go v1.11.2

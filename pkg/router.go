@@ -6,7 +6,7 @@ import (
 	"github.com/NubeIO/lib-module-go/http"
 	"github.com/NubeIO/lib-module-go/module"
 	"github.com/NubeIO/lib-module-go/router"
-	"github.com/NubeIO/module-core-modbus/schema/modbus"
+	"github.com/NubeIO/module-core-modbus/schema"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
@@ -79,15 +79,15 @@ func InitRouter() {
 }
 
 func GetNetworkSchema(m *module.Module, r *router.Request) ([]byte, error) {
-	return json.Marshal(modbus.GetNetworkSchema())
+	return json.Marshal(schema.GetNetworkSchema())
 }
 
 func GetDeviceSchema(m *module.Module, r *router.Request) ([]byte, error) {
-	return json.Marshal(modbus.GetDeviceSchema())
+	return json.Marshal(schema.GetDeviceSchema())
 }
 
 func GetPointSchema(m *module.Module, r *router.Request) ([]byte, error) {
-	return json.Marshal(modbus.GetPointSchema())
+	return json.Marshal(schema.GetPointSchema())
 }
 
 func CreateNetwork(m *module.Module, r *router.Request) ([]byte, error) {
