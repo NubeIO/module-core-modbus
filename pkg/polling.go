@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-utils-go/boolean"
+	"github.com/NubeIO/lib-utils-go/float"
+	"github.com/NubeIO/lib-utils-go/integer"
+	"github.com/NubeIO/lib-utils-go/nurl"
+	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/module-core-modbus/smod"
+	"github.com/NubeIO/module-core-modbus/utils/poller"
+	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	argspkg "github.com/NubeIO/rubix-os/args"
-	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
-	"github.com/NubeIO/rubix-os/src/poller"
-	"github.com/NubeIO/rubix-os/utils/boolean"
-	"github.com/NubeIO/rubix-os/utils/float"
-	"github.com/NubeIO/rubix-os/utils/integer"
-	"github.com/NubeIO/rubix-os/utils/nurl"
-	"github.com/NubeIO/rubix-os/utils/writemode"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	log "github.com/sirupsen/logrus"
 	"math"
 	"strconv"
@@ -31,7 +31,7 @@ type polling struct {
 	isRunning     bool
 }
 
-var poll poller.Poller // TODO: Do we need standalone
+var poll poller.Poller
 
 func (m *Module) getNetworkPollManagerByUUID(netUUID string) (*pollqueue.NetworkPollManager, error) {
 	for _, netPollMan := range m.NetworkPollManagers {
@@ -82,8 +82,8 @@ func (m *Module) ModbusPolling() error {
 
 			pollStartTime := time.Now()
 
-			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, argspkg.Args{})
-			if err != nil || net == nil || net.PluginConfId != m.pluginUUID {
+			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, nargs.Args{})
+			if err != nil || net == nil || net.PluginUUID != m.pluginUUID {
 				m.modbusDebugMsg("MODBUS NETWORK NOT FOUND")
 				continue
 			}
@@ -115,7 +115,7 @@ func (m *Module) ModbusPolling() error {
 			netPollMan.PrintPollQueuePointUUIDs()
 			netPollMan.PrintPollingPointDebugInfo(pp)
 
-			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, argspkg.Args{})
+			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, nargs.Args{})
 			if dev == nil || err != nil {
 				m.modbusErrorMsg("could not find deviceID:", pp.FFDeviceUUID)
 				netPollMan.PollingFinished(
@@ -132,7 +132,7 @@ func (m *Module) ModbusPolling() error {
 			}
 			if boolean.IsFalse(dev.Enable) {
 				m.modbusErrorMsg("device is disabled.")
-				m.grpcMarshaller.SetErrorsForAllPointsOnDevice(
+				m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 					dev.UUID,
 					"device disabled",
 					model.MessageLevel.Warning,
@@ -152,7 +152,7 @@ func (m *Module) ModbusPolling() error {
 			}
 			if dev.AddressId <= 0 || dev.AddressId >= 255 {
 				m.modbusErrorMsg("address is not valid. modbus addresses must be between 1 and 254")
-				m.grpcMarshaller.SetErrorsForAllPointsOnDevice(
+				m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 					dev.UUID,
 					"address out of range",
 					model.MessageLevel.Critical,
@@ -171,7 +171,7 @@ func (m *Module) ModbusPolling() error {
 				continue
 			}
 
-			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, argspkg.Args{})
+			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, nargs.Args{})
 			if pnt == nil || err != nil {
 				m.modbusErrorMsg("could not find pointID: ", pp.FFPointUUID)
 				netPollMan.PollingFinished(
@@ -422,7 +422,7 @@ func (m *Module) ModbusPolling() error {
 				if counter > 100000 {
 					counter = 100
 				}
-				device, err := m.grpcMarshaller.GetDevice(dev.UUID, argspkg.Args{})
+				device, err := m.grpcMarshaller.GetDevice(dev.UUID, nargs.Args{})
 				if err != nil || device == nil {
 					continue
 				}

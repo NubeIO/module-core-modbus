@@ -3,12 +3,12 @@ package pkg
 import (
 	"errors"
 	"fmt"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	argspkg "github.com/NubeIO/rubix-os/args"
-	"github.com/NubeIO/rubix-os/utils/boolean"
-	"github.com/NubeIO/rubix-os/utils/float"
-	"github.com/NubeIO/rubix-os/utils/integer"
-	"github.com/NubeIO/rubix-os/utils/nstring"
+	"github.com/NubeIO/lib-utils-go/boolean"
+	"github.com/NubeIO/lib-utils-go/float"
+	"github.com/NubeIO/lib-utils-go/integer"
+	"github.com/NubeIO/lib-utils-go/nstring"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"strconv"
 	"time"
 )
@@ -36,7 +36,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 		var net model.Network
 		net.Name = "modbus"
 		net.TransportType = model.TransType.IP
-		net.PluginPath = "modbus"
+		net.PluginName = "modbus"
 
 		var dev model.Device
 		dev.Name = "modbus"
@@ -62,9 +62,9 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 		var net model.Network
 		net.Name = "Modbus Net"
 		net.TransportType = model.TransType.IP
-		net.PluginPath = "modbus"
+		net.PluginName = "modbus"
 
-		net.PluginConfId = m.pluginUUID
+		net.PluginUUID = m.pluginUUID
 		_, err := m.grpcMarshaller.CreateNetwork(&net)
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("network creation failure: %s", err))
@@ -98,7 +98,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+			_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 			if err != nil {
 				m.modbusErrorMsg(fmt.Sprintf("consumer point creation failure: %s", err))
 			}
@@ -112,7 +112,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 			var net model.Network
 			net.Name = "Modbus Net " + strconv.Itoa(j)
 			net.TransportType = model.TransType.IP
-			net.PluginPath = "modbus"
+			net.PluginName = "modbus"
 			time.Sleep(2 * time.Second)
 
 			var dev model.Device
@@ -139,9 +139,9 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 		var net model.Network
 		net.Name = "Modbus Net"
 		net.TransportType = model.TransType.Serial
-		net.PluginPath = "modbus"
+		net.PluginName = "modbus"
 
-		net.PluginConfId = m.pluginUUID
+		net.PluginUUID = m.pluginUUID
 		_, err := m.grpcMarshaller.CreateNetwork(&net)
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("network creation failure: %s", err))
@@ -184,7 +184,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 				if err != nil {
 					return "", err
 				}
-				_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+				_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 				if err != nil {
 					m.modbusErrorMsg(fmt.Sprintf("consumer point creation failure: %s", err))
 				}
@@ -197,10 +197,10 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 		var net model.Network
 		net.Name = "Modbus Net"
 		net.TransportType = model.TransType.Serial
-		net.PluginPath = "modbus"
+		net.PluginName = "modbus"
 		net.MaxPollRate = float.New(0.1)
 
-		net.PluginConfId = m.pluginUUID
+		net.PluginUUID = m.pluginUUID
 		_, err := m.grpcMarshaller.CreateNetwork(&net)
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("network creation failure: %s", err))
@@ -241,7 +241,7 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 				if err != nil {
 					return "", err
 				}
-				_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+				_, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 				if err != nil {
 					m.modbusErrorMsg(fmt.Sprintf("consumer point creation failure: %s", err))
 				}
@@ -253,18 +253,18 @@ func (m *Module) wizardTCP(body wizard) (string, error) {
 	case 5:
 		if body.NameArg != "" && body.AddArg > 0 {
 			networkName := "CliniMix-TMV"
-			net, err := m.grpcMarshaller.GetNetworkByName(networkName, argspkg.Args{})
+			net, err := m.grpcMarshaller.GetNetworkByName(networkName, nargs.Args{})
 			if err != nil || net == nil {
 				if net == nil {
 					net = &model.Network{}
 				}
 				net.Name = "CliniMix-TMV"
 				net.TransportType = model.TransType.Serial
-				net.PluginPath = "modbus"
+				net.PluginName = "modbus"
 				net.SerialPort = nstring.New("/data/socat/serialBridge1")
 				net.MaxPollRate = float.New(5)
 				net.SerialTimeout = integer.New(3)
-				net.PluginConfId = m.pluginUUID
+				net.PluginUUID = m.pluginUUID
 				net, err = m.addNetwork(net)
 				if err != nil {
 					m.modbusErrorMsg(fmt.Sprintf("network creation failure: %s", err))
@@ -666,7 +666,7 @@ func (m *Module) wizardSerial(body wizard) (string, error) {
 	var net model.Network
 	net.Name = "modbus"
 	net.TransportType = model.TransType.Serial
-	net.PluginPath = "modbus"
+	net.PluginName = "modbus"
 	net.SerialPort = &sp
 	net.SerialBaudRate = integer.NewUint(uint(br))
 	net.SerialParity = nstring.New("none")

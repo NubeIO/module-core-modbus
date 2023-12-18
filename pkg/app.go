@@ -3,16 +3,15 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-utils-go/array"
+	"github.com/NubeIO/lib-utils-go/boolean"
+	"github.com/NubeIO/lib-utils-go/float"
+	"github.com/NubeIO/module-core-modbus/pollqueue"
+	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	argspkg "github.com/NubeIO/rubix-os/args"
-	"github.com/NubeIO/rubix-os/interfaces"
-	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
-	"github.com/NubeIO/rubix-os/utils/array"
-	"github.com/NubeIO/rubix-os/utils/boolean"
-	"github.com/NubeIO/rubix-os/utils/float"
-	"github.com/NubeIO/rubix-os/utils/writemode"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"go.bug.st/serial"
 	"strings"
 	"time"
@@ -54,7 +53,7 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 			model.MessageLevel.Warning,
 			model.CommonFaultCode.NetworkError,
 		)
-		err = m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork(
+		err = m.grpcMarshaller.UpdateNetworkDescendantsErrors(
 			network.UUID,
 			"network disabled",
 			model.MessageLevel.Warning,
@@ -81,7 +80,12 @@ func (m *Module) addDevice(body *model.Device) (device *model.Device, err error)
 
 	if boolean.IsFalse(device.Enable) {
 		err = m.deviceUpdateErr(device, "device disabled", model.MessageLevel.Warning, model.CommonFaultCode.DeviceError)
-		err = m.grpcMarshaller.SetErrorsForAllPointsOnDevice(device.UUID, "device disabled", model.MessageLevel.Warning, model.CommonFaultCode.DeviceError)
+		err = m.grpcMarshaller.UpdateDeviceDescendantsErrors(
+			device.UUID,
+			"device disabled",
+			model.MessageLevel.Warning,
+			model.CommonFaultCode.DeviceError,
+		)
 	}
 
 	// NOTHING TO DO ON DEVICE CREATED
@@ -114,14 +118,14 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if err != nil {
 		return nil, err
 	}
-	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 	if point == nil || err != nil {
 		m.modbusDebugMsg("addPoint(): failed to create modbus point: ", body.Name)
 		return nil, errors.New(fmt.Sprint("failed to create modbus point. err: ", err))
 	}
 	m.modbusDebugMsg(fmt.Sprintf("addPoint(): %+v\n", point))
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return nil, err
@@ -158,8 +162,8 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	return point, nil
 }
 
-func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err error) {
-	m.modbusDebugMsg("updateNetwork(): ", body.UUID)
+func (m *Module) updateNetwork(uuid string, body *model.Network) (network *model.Network, err error) {
+	m.modbusDebugMsg("updateNetwork(): ", uuid)
 	if body == nil {
 		m.modbusDebugMsg("updateNetwork():  nil network object")
 		return
@@ -182,7 +186,7 @@ func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err
 		body.CommonFault.LastOk = time.Now().UTC()
 	}
 
-	network, err = m.grpcMarshaller.UpdateNetwork(body.UUID, body)
+	network, err = m.grpcMarshaller.UpdateNetwork(uuid, body)
 	if err != nil || network == nil {
 		return nil, err
 	}
@@ -205,7 +209,7 @@ func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err
 	if boolean.IsFalse(network.Enable) && netPollMan.Enable == true {
 		// DO POLLING DISABLE ACTIONS
 		netPollMan.StopPolling()
-		m.grpcMarshaller.SetErrorsForAllDevicesOnNetwork(
+		m.grpcMarshaller.UpdateNetworkDescendantsErrors(
 			network.UUID,
 			"network disabled",
 			model.MessageLevel.Warning,
@@ -218,18 +222,18 @@ func (m *Module) updateNetwork(body *model.Network) (network *model.Network, err
 		}
 		// DO POLLING Enable ACTIONS
 		netPollMan.StartPolling()
-		m.grpcMarshaller.ClearErrorsForAllDevicesOnNetwork(network.UUID, true)
+		m.grpcMarshaller.ClearNetworkDescendantsErrors(network.UUID, true)
 	}
 
-	network, err = m.grpcMarshaller.UpdateNetwork(body.UUID, network)
+	network, err = m.grpcMarshaller.UpdateNetwork(uuid, network)
 	if err != nil || network == nil {
 		return nil, err
 	}
 	return network, nil
 }
 
-func (m *Module) updateDevice(body *model.Device) (device *model.Device, err error) {
-	m.modbusDebugMsg("updateDevice(): ", body.UUID)
+func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.Device, err error) {
+	m.modbusDebugMsg("updateDevice(): ", uuid)
 	if body == nil {
 		m.modbusDebugMsg("updateDevice(): nil device object")
 		return
@@ -248,13 +252,13 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 		body.CommonFault.LastOk = time.Now().UTC()
 	}
 
-	device, err = m.grpcMarshaller.UpdateDevice(body.UUID, body)
+	device, err = m.grpcMarshaller.UpdateDevice(uuid, body)
 	if err != nil || device == nil {
 		return nil, err
 	}
 
 	if boolean.IsTrue(device.Enable) { // If Enabled we need to GetDevice so we get Points
-		device, err = m.grpcMarshaller.GetDevice(device.UUID, argspkg.Args{})
+		device, err = m.grpcMarshaller.GetDevice(device.UUID, nargs.Args{})
 		if err != nil || device == nil {
 			return nil, err
 		}
@@ -267,7 +271,7 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 	}
 	if boolean.IsFalse(device.Enable) && netPollMan.PollQueue.CheckIfActiveDevicesListIncludes(device.UUID) {
 		// DO POLLING DISABLE ACTIONS FOR DEVICE
-		m.grpcMarshaller.SetErrorsForAllPointsOnDevice(
+		m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 			device.UUID,
 			"device disabled",
 			model.MessageLevel.Warning,
@@ -277,7 +281,7 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 
 	} else if boolean.IsTrue(device.Enable) && !netPollMan.PollQueue.CheckIfActiveDevicesListIncludes(device.UUID) {
 		// DO POLLING ENABLE ACTIONS FOR DEVICE
-		err = m.grpcMarshaller.ClearErrorsForAllPointsOnDevice(device.UUID)
+		err = m.grpcMarshaller.ClearDeviceDescendantsErrors(device.UUID)
 		if err != nil {
 			m.modbusDebugMsg("updateDevice(): error on ClearErrorsForAllPointsOnDevice(): ", err)
 		}
@@ -339,8 +343,8 @@ func (m *Module) updateDevice(body *model.Device) (device *model.Device, err err
 	return device, nil
 }
 
-func (m *Module) updatePoint(body *model.Point) (point *model.Point, err error) {
-	m.modbusDebugMsg("updatePoint(): ", body.UUID)
+func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point, err error) {
+	m.modbusDebugMsg("updatePoint(): ", uuid)
 	if body == nil {
 		m.modbusDebugMsg("updatePoint(): nil point object")
 		return
@@ -371,13 +375,13 @@ func (m *Module) updatePoint(body *model.Point) (point *model.Point, err error) 
 	body.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 	body.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 	body.CommonFault.LastOk = time.Now().UTC()
-	point, err = m.grpcMarshaller.UpdatePoint(body.UUID, body)
+	point, err = m.grpcMarshaller.UpdatePoint(uuid, body, nargs.Args{})
 	if err != nil || point == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from UpdatePoint() err:", err)
 		return nil, err
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
 	if err != nil || dev == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from GetDevice()")
 		return nil, err
@@ -437,7 +441,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 	}
 	point = &pnt.Point
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, argspkg.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("writePoint(): bad response from GetDevice()")
 		return nil, err
@@ -476,7 +480,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 					point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 					point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 					point.CommonFault.LastOk = time.Now().UTC()
-					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 					if err != nil || point == nil {
 						m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 						_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): cannot find PollingPoint for point: ", point.UUID), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
@@ -504,7 +508,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 			point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 			point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 			point.CommonFault.LastOk = time.Now().UTC()
-			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
+			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
 			if err != nil || point == nil {
 				m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 				_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
@@ -601,7 +605,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 		return
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, argspkg.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, nargs.Args{})
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return false, err
@@ -631,10 +635,10 @@ func (m *Module) pointUpdate(point *model.Point, value float64, readSuccess bool
 	if readSuccess {
 		point.OriginalValue = float.New(value)
 	}
-	opts := interfaces.UpdatePointOpts{
+	opts := model.UpdatePointOpts{
 		WriteValue: true,
 	}
-	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, opts)
+	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, &opts)
 	if err != nil {
 		m.modbusDebugMsg("MODBUS UPDATE POINT pointUpdate() error: ", err)
 		return nil, err
