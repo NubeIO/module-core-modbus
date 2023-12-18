@@ -76,8 +76,6 @@ func InitRouter() {
 	route.Handle(http.GET, "/api/list/serial", GetListSerial)
 	route.Handle(http.GET, "/api/polling/stats/network/name/:name", GetNetworkPollingStats)
 	route.Handle(http.POST, "/api/modbus/point/operation", CreatePointOperation)
-	route.Handle(http.POST, "/api/modbus/wizard/tcp", CreateWizardTcp)
-	route.Handle(http.POST, "/api/modbus/wizard/serial", CreateWizardSerial)
 }
 
 func GetNetworkSchema(m *module.Module, r *router.Request) ([]byte, error) {
@@ -262,30 +260,4 @@ func CreatePointOperation(m *module.Module, r *router.Request) ([]byte, error) {
 	}
 	(*m).(*Module).modbusDebugMsg("responseValue", responseValue)
 	return json.Marshal(responseValue)
-}
-
-func CreateWizardTcp(m *module.Module, r *router.Request) ([]byte, error) {
-	var dto wizard
-	err := json.Unmarshal(r.Body, &dto)
-	if err != nil {
-		return nil, err
-	}
-	n, err := (*m).(*Module).wizardTCP(dto)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(n)
-}
-
-func CreateWizardSerial(m *module.Module, r *router.Request) ([]byte, error) {
-	var dto wizard
-	err := json.Unmarshal(r.Body, &dto)
-	if err != nil {
-		return nil, err
-	}
-	serial, err := (*m).(*Module).wizardSerial(dto)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(serial)
 }

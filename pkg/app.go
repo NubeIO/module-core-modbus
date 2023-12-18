@@ -635,10 +635,7 @@ func (m *Module) pointUpdate(point *model.Point, value float64, readSuccess bool
 	if readSuccess {
 		point.OriginalValue = float.New(value)
 	}
-	opts := model.UpdatePointOpts{
-		WriteValue: true,
-	}
-	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, &opts)
+	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{WriteValue: boolean.NewTrue()})
 	if err != nil {
 		m.modbusDebugMsg("MODBUS UPDATE POINT pointUpdate() error: ", err)
 		return nil, err
