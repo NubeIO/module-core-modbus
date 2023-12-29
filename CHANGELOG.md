@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [59b25a7](https://github.com/NubeIO/module-core-modbus/tree/59b25a7829593eb1fb968f4b9d3e181347fdc56f) (2023-12-29)
+- Sync ros till [865be42](https://github.com/NubeIO/rubix-os/tree/865be423cbf5bfe3878ec264a6cd6f81a1907a87)
+
 ## [7959c0a](https://github.com/NubeIO/module-core-modbus/tree/7959c0aab006f60becb7718e45958d6520c3f859) (2023-12-18)
 - Sync ros till [835e87b](https://github.com/NubeIO/rubix-os/tree/835e87b93a4586a5b1a31965b1dcfbce20acc0af)
 
