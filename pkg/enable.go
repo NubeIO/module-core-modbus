@@ -3,7 +3,6 @@ package pkg
 import (
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 )
 
 func (m *Module) Enable() error {
@@ -11,7 +10,7 @@ func (m *Module) Enable() error {
 	m.fault = false
 	m.setUUID()
 
-	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName, nargs.Args{})
+	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName, nil)
 	if err != nil {
 		m.networks = nil
 	} else if nets != nil {

@@ -1,11 +1,7 @@
 package pkg
 
-import (
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
-)
-
 func (m *Module) setUUID() {
-	q, err := m.grpcMarshaller.GetPluginByName(path, nargs.Args{})
+	q, err := m.grpcMarshaller.GetPluginByName(path, nil)
 	if err != nil {
 		return
 	}

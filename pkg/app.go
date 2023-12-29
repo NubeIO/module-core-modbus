@@ -3,6 +3,7 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/array"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
@@ -118,14 +119,14 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if err != nil {
 		return nil, err
 	}
-	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
+	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
 	if point == nil || err != nil {
 		m.modbusDebugMsg("addPoint(): failed to create modbus point: ", body.Name)
 		return nil, errors.New(fmt.Sprint("failed to create modbus point. err: ", err))
 	}
 	m.modbusDebugMsg(fmt.Sprintf("addPoint(): %+v\n", point))
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return nil, err
@@ -258,7 +259,7 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 	}
 
 	if boolean.IsTrue(device.Enable) { // If Enabled we need to GetDevice so we get Points
-		device, err = m.grpcMarshaller.GetDevice(device.UUID, nargs.Args{})
+		device, err = m.grpcMarshaller.GetDevice(device.UUID, nil)
 		if err != nil || device == nil {
 			return nil, err
 		}
@@ -375,13 +376,13 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	body.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 	body.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 	body.CommonFault.LastOk = time.Now().UTC()
-	point, err = m.grpcMarshaller.UpdatePoint(uuid, body, nargs.Args{})
+	point, err = m.grpcMarshaller.UpdatePoint(uuid, body, nil)
 	if err != nil || point == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from UpdatePoint() err:", err)
 		return nil, err
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
 	if err != nil || dev == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from GetDevice()")
 		return nil, err
@@ -441,7 +442,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 	}
 	point = &pnt.Point
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nargs.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("writePoint(): bad response from GetDevice()")
 		return nil, err
@@ -480,7 +481,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 					point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 					point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 					point.CommonFault.LastOk = time.Now().UTC()
-					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
+					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
 					if err != nil || point == nil {
 						m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 						_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): cannot find PollingPoint for point: ", point.UUID), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
@@ -508,7 +509,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 			point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
 			point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 			point.CommonFault.LastOk = time.Now().UTC()
-			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{})
+			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
 			if err != nil || point == nil {
 				m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 				_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
@@ -605,7 +606,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 		return
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, nargs.Args{})
+	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, nil)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return false, err
@@ -635,7 +636,7 @@ func (m *Module) pointUpdate(point *model.Point, value float64, readSuccess bool
 	if readSuccess {
 		point.OriginalValue = float.New(value)
 	}
-	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, nargs.Args{WriteValue: boolean.NewTrue()})
+	_, err := m.grpcMarshaller.UpdatePoint(point.UUID, point, &nmodule.Opts{Args: &nargs.Args{WriteValue: boolean.NewTrue()}})
 	if err != nil {
 		m.modbusDebugMsg("MODBUS UPDATE POINT pointUpdate() error: ", err)
 		return nil, err

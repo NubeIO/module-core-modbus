@@ -3,7 +3,6 @@ package pollqueue
 import (
 	"fmt"
 	"github.com/NubeIO/lib-utils-go/float"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"time"
 	// log "github.com/sirupsen/logrus"
 )
@@ -37,8 +36,7 @@ func (pm *NetworkPollManager) StartQueueUnloader() {
 
 	refreshRate := 100 * time.Millisecond // Default MaxPollRate
 	if pm.Marshaller != nil {
-		var netArg nargs.Args
-		net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, netArg)
+		net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, nil)
 		if err != nil {
 			pm.pollQueueDebugMsg(fmt.Sprintf("NetworkPollManager.StartQueueUnloader(): couldn't find network %s", pm.FFNetworkUUID))
 			return

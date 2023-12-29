@@ -3,7 +3,7 @@ package pollqueue
 import (
 	"container/heap"
 	"fmt"
-	"github.com/NubeIO/lib-module-go/module"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
@@ -17,7 +17,7 @@ import (
 
 type NetworkPollManager struct {
 	Config     *Config
-	Marshaller module.Marshaller
+	Marshaller nmodule.Marshaller
 
 	Enable                    bool
 	MaxPollRate               time.Duration
@@ -127,9 +127,7 @@ func (pm *NetworkPollManager) EmptyQueue() {
 }
 
 func (pm *NetworkPollManager) ReAddDevicePoints(devUUID string) { // This is triggered by a user who wants to update the device poll times for standby points
-	var arg nargs.Args
-	arg.WithPoints = true
-	dev, err := pm.Marshaller.GetDevice(devUUID, arg)
+	dev, err := pm.Marshaller.GetDevice(devUUID, &nmodule.Opts{Args: &nargs.Args{WithPoints: true}})
 	if dev == nil || err != nil {
 		pm.pollQueueErrorMsg("ReAddDevicePoints(): cannot find device ", devUUID)
 		return
@@ -144,7 +142,7 @@ func (pm *NetworkPollManager) ReAddDevicePoints(devUUID string) { // This is tri
 	}
 }
 
-func NewPollManager(conf *Config, marshaller module.Marshaller, ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string, maxPollRate float64) *NetworkPollManager {
+func NewPollManager(conf *Config, marshaller nmodule.Marshaller, ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string, maxPollRate float64) *NetworkPollManager {
 	// Make the main priority polling queue
 	queue := make([]*PollingPoint, 0)
 	pq := &PriorityPollQueue{queue}
@@ -177,11 +175,10 @@ func NewPollManager(conf *Config, marshaller module.Marshaller, ffNetworkUUID, f
 }
 
 func (pm *NetworkPollManager) GetPollRateDuration(rate model.PollRate, deviceUUID string) time.Duration {
-	var arg nargs.Args
 	var duration time.Duration
 
 	if pm.Marshaller != nil {
-		device, err := pm.Marshaller.GetDevice(deviceUUID, arg)
+		device, err := pm.Marshaller.GetDevice(deviceUUID, nil)
 		if err != nil {
 			pm.pollQueueDebugMsg(fmt.Sprintf("NetworkPollManager.GetPollRateDuration(): couldn't find device %s", deviceUUID))
 			return 30 * time.Second
@@ -246,7 +243,7 @@ func (pm *NetworkPollManager) PollingFinished(pp *PollingPoint, pollStartTime ti
 func (pm *NetworkPollManager) PollQueueErrorChecking() {
 	pm.pollQueueDebugMsg("NetworkPollManager.PollQueueErrorChecking")
 
-	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, nargs.Args{WithDevices: true, WithPoints: true}) // api.Args{WithDevices: true, WithPoints: true}
+	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, &nmodule.Opts{Args: &nargs.Args{WithDevices: true, WithPoints: true}}) // api.Args{WithDevices: true, WithPoints: true}
 	if net == nil || err != nil {
 		pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Network Not Found")
 		return

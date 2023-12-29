@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/NubeIO/lib-module-go/module"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/module-core-modbus/pkg"
 	"github.com/hashicorp/go-plugin"
 )
 
 func ServePlugin() {
 	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: module.HandshakeConfig,
-		Plugins:         plugin.PluginSet{"module-core-modbus": &module.NubeModule{Impl: &pkg.Module{}}},
+		HandshakeConfig: nmodule.HandshakeConfig,
+		Plugins:         plugin.PluginSet{"module-core-modbus": &nmodule.NubeModule{Impl: &pkg.Module{}}},
 		GRPCServer:      plugin.DefaultGRPCServer,
 	})
 }

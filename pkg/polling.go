@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/lib-utils-go/integer"
@@ -82,7 +83,7 @@ func (m *Module) ModbusPolling() error {
 
 			pollStartTime := time.Now()
 
-			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, nargs.Args{})
+			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, nil)
 			if err != nil || net == nil || net.PluginUUID != m.pluginUUID {
 				m.modbusDebugMsg("MODBUS NETWORK NOT FOUND")
 				continue
@@ -115,7 +116,7 @@ func (m *Module) ModbusPolling() error {
 			netPollMan.PrintPollQueuePointUUIDs()
 			netPollMan.PrintPollingPointDebugInfo(pp)
 
-			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, nargs.Args{})
+			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, nil)
 			if dev == nil || err != nil {
 				m.modbusErrorMsg("could not find deviceID:", pp.FFDeviceUUID)
 				netPollMan.PollingFinished(
@@ -171,7 +172,7 @@ func (m *Module) ModbusPolling() error {
 				continue
 			}
 
-			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, nargs.Args{})
+			pnt, err := m.grpcMarshaller.GetPoint(pp.FFPointUUID, &nmodule.Opts{Args: &nargs.Args{WithPriority: true}})
 			if pnt == nil || err != nil {
 				m.modbusErrorMsg("could not find pointID: ", pp.FFPointUUID)
 				netPollMan.PollingFinished(
@@ -422,7 +423,7 @@ func (m *Module) ModbusPolling() error {
 				if counter > 100000 {
 					counter = 100
 				}
-				device, err := m.grpcMarshaller.GetDevice(dev.UUID, nargs.Args{})
+				device, err := m.grpcMarshaller.GetDevice(dev.UUID, nil)
 				if err != nil || device == nil {
 					continue
 				}

@@ -3,13 +3,13 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/NubeIO/lib-module-go/http"
-	"github.com/NubeIO/lib-module-go/module"
+	"github.com/NubeIO/lib-module-go/nhttp"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-module-go/router"
 	"github.com/NubeIO/module-core-modbus/schema"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
+	"net/http"
 )
 
 type Scan struct {
@@ -44,53 +44,53 @@ type wizard struct {
 var route *router.Router
 
 func (m *Module) CallModule(
-	method http.Method,
-	api string,
-	args nargs.Args,
+	method nhttp.Method,
+	urlString string,
+	headers http.Header,
 	body []byte,
 ) ([]byte, error) {
-	mod := (module.Module)(m)
-	return route.CallHandler(&mod, method, api, args, body)
+	mod := (nmodule.Module)(m)
+	return route.CallHandler(&mod, method, urlString, headers, body)
 }
 
 func InitRouter() {
 	route = router.NewRouter()
 
-	route.Handle(http.GET, "/api/network/schema", GetNetworkSchema)
-	route.Handle(http.GET, "/api/devices/schema", GetDeviceSchema)
-	route.Handle(http.GET, "/api/points/schema", GetPointSchema)
+	route.Handle(nhttp.GET, "/api/network/schema", GetNetworkSchema)
+	route.Handle(nhttp.GET, "/api/devices/schema", GetDeviceSchema)
+	route.Handle(nhttp.GET, "/api/points/schema", GetPointSchema)
 
-	route.Handle(http.POST, "/api/networks", CreateNetwork)
-	route.Handle(http.PATCH, "/api/networks/:uuid", UpdateNetwork)
-	route.Handle(http.DELETE, "/api/networks/:uuid", DeleteNetwork)
+	route.Handle(nhttp.POST, "/api/networks", CreateNetwork)
+	route.Handle(nhttp.PATCH, "/api/networks/:uuid", UpdateNetwork)
+	route.Handle(nhttp.DELETE, "/api/networks/:uuid", DeleteNetwork)
 
-	route.Handle(http.POST, "/api/devices", CreateDevice)
-	route.Handle(http.PATCH, "/api/devices/:uuid", UpdateDevice)
-	route.Handle(http.DELETE, "/api/devices/:uuid", DeleteDevice)
+	route.Handle(nhttp.POST, "/api/devices", CreateDevice)
+	route.Handle(nhttp.PATCH, "/api/devices/:uuid", UpdateDevice)
+	route.Handle(nhttp.DELETE, "/api/devices/:uuid", DeleteDevice)
 
-	route.Handle(http.POST, "/api/points", CreatePoint)
-	route.Handle(http.PATCH, "/api/points/:uuid", UpdatePoint)
-	route.Handle(http.DELETE, "/api/points/:uuid", DeletePoint)
-	route.Handle(http.PATCH, "/api/points/:uuid/write", PointWrite)
+	route.Handle(nhttp.POST, "/api/points", CreatePoint)
+	route.Handle(nhttp.PATCH, "/api/points/:uuid", UpdatePoint)
+	route.Handle(nhttp.DELETE, "/api/points/:uuid", DeletePoint)
+	route.Handle(nhttp.PATCH, "/api/points/:uuid/write", PointWrite)
 
-	route.Handle(http.GET, "/api/list/serial", GetListSerial)
-	route.Handle(http.GET, "/api/polling/stats/network/name/:name", GetNetworkPollingStats)
-	route.Handle(http.POST, "/api/modbus/point/operation", CreatePointOperation)
+	route.Handle(nhttp.GET, "/api/list/serial", GetListSerial)
+	route.Handle(nhttp.GET, "/api/polling/stats/network/name/:name", GetNetworkPollingStats)
+	route.Handle(nhttp.POST, "/api/modbus/point/operation", CreatePointOperation)
 }
 
-func GetNetworkSchema(m *module.Module, r *router.Request) ([]byte, error) {
+func GetNetworkSchema(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(schema.GetNetworkSchema())
 }
 
-func GetDeviceSchema(m *module.Module, r *router.Request) ([]byte, error) {
+func GetDeviceSchema(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(schema.GetDeviceSchema())
 }
 
-func GetPointSchema(m *module.Module, r *router.Request) ([]byte, error) {
+func GetPointSchema(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(schema.GetPointSchema())
 }
 
-func CreateNetwork(m *module.Module, r *router.Request) ([]byte, error) {
+func CreateNetwork(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var network *model.Network
 	err := json.Unmarshal(r.Body, &network)
 	if err != nil {
@@ -103,28 +103,28 @@ func CreateNetwork(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(net)
 }
 
-func UpdateNetwork(m *module.Module, r *router.Request) ([]byte, error) {
+func UpdateNetwork(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var network *model.Network
 	err := json.Unmarshal(r.Body, &network)
 	if err != nil {
 		return nil, err
 	}
-	net, err := (*m).(*Module).updateNetwork(r.Params["uuid"], network)
+	net, err := (*m).(*Module).updateNetwork(r.PathParams["uuid"], network)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(net)
 }
 
-func DeleteNetwork(m *module.Module, r *router.Request) ([]byte, error) {
-	ok, err := (*m).(*Module).deleteNetwork(r.Params["uuid"])
+func DeleteNetwork(m *nmodule.Module, r *router.Request) ([]byte, error) {
+	ok, err := (*m).(*Module).deleteNetwork(r.PathParams["uuid"])
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(ok)
 }
 
-func CreateDevice(m *module.Module, r *router.Request) ([]byte, error) {
+func CreateDevice(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var device *model.Device
 	err := json.Unmarshal(r.Body, &device)
 	if err != nil {
@@ -137,21 +137,21 @@ func CreateDevice(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(dev)
 }
 
-func UpdateDevice(m *module.Module, r *router.Request) ([]byte, error) {
+func UpdateDevice(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var device *model.Device
 	err := json.Unmarshal(r.Body, &device)
 	if err != nil {
 		return nil, err
 	}
-	dev, err := (*m).(*Module).updateDevice(r.Params["uuid"], device)
+	dev, err := (*m).(*Module).updateDevice(r.PathParams["uuid"], device)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(dev)
 }
 
-func DeleteDevice(m *module.Module, r *router.Request) ([]byte, error) {
-	dev, err := (*m).(*Module).grpcMarshaller.GetDevice(r.Params["uuid"], nargs.Args{})
+func DeleteDevice(m *nmodule.Module, r *router.Request) ([]byte, error) {
+	dev, err := (*m).(*Module).grpcMarshaller.GetDevice(r.PathParams["uuid"], nil)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func DeleteDevice(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(ok)
 }
 
-func CreatePoint(m *module.Module, r *router.Request) ([]byte, error) {
+func CreatePoint(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var point *model.Point
 	err := json.Unmarshal(r.Body, &point)
 	if err != nil {
@@ -175,21 +175,21 @@ func CreatePoint(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(pnt)
 }
 
-func UpdatePoint(m *module.Module, r *router.Request) ([]byte, error) {
+func UpdatePoint(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var point *model.Point
 	err := json.Unmarshal(r.Body, &point)
 	if err != nil {
 		return nil, err
 	}
-	pnt, err := (*m).(*Module).updatePoint(r.Params["uuid"], point)
+	pnt, err := (*m).(*Module).updatePoint(r.PathParams["uuid"], point)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(pnt)
 }
 
-func DeletePoint(m *module.Module, r *router.Request) ([]byte, error) {
-	pnt, err := (*m).(*Module).grpcMarshaller.GetPoint(r.Params["uuid"], nargs.Args{})
+func DeletePoint(m *nmodule.Module, r *router.Request) ([]byte, error) {
+	pnt, err := (*m).(*Module).grpcMarshaller.GetPoint(r.PathParams["uuid"], nil)
 	if err != nil {
 		return nil, err
 	}
@@ -200,20 +200,20 @@ func DeletePoint(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(ok)
 }
 
-func PointWrite(m *module.Module, r *router.Request) ([]byte, error) {
+func PointWrite(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var pw *model.PointWriter
 	err := json.Unmarshal(r.Body, &pw)
 	if err != nil {
 		return nil, err
 	}
-	pnt, err := (*m).(*Module).writePoint(r.Params["uuid"], pw)
+	pnt, err := (*m).(*Module).writePoint(r.PathParams["uuid"], pw)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(pnt)
 }
 
-func GetListSerial(m *module.Module, r *router.Request) ([]byte, error) {
+func GetListSerial(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	serial, err := (*m).(*Module).listSerialPorts()
 	if err != nil {
 		return nil, err
@@ -221,15 +221,15 @@ func GetListSerial(m *module.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(serial)
 }
 
-func GetNetworkPollingStats(m *module.Module, r *router.Request) ([]byte, error) {
-	stats, err := (*m).(*Module).getPollingStats(r.Params["name"])
+func GetNetworkPollingStats(m *nmodule.Module, r *router.Request) ([]byte, error) {
+	stats, err := (*m).(*Module).getPollingStats(r.PathParams["name"])
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(stats)
 }
 
-func CreatePointOperation(m *module.Module, r *router.Request) ([]byte, error) {
+func CreatePointOperation(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	var dto Body
 	err := json.Unmarshal(r.Body, &dto)
 	if err != nil {

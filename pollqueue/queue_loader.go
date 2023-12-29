@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
@@ -20,10 +21,7 @@ func (pm *NetworkPollManager) RebuildPollingQueue() error {
 	pm.pollQueueDebugMsg("RebuildPollingQueue()")
 	wasRunning := pm.PluginQueueUnloader != nil
 	pm.EmptyQueue()
-	var arg nargs.Args
-	arg.WithDevices = true
-	arg.WithPoints = true
-	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, arg)
+	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, &nmodule.Opts{Args: &nargs.Args{WithDevices: true, WithPoints: true}})
 	if err != nil || net.Devices == nil || len(net.Devices) == 0 {
 		pm.pollQueueDebugMsg("RebuildPollingQueue() couldn't find any devices for the network %s", pm.FFNetworkUUID)
 		return errors.New(fmt.Sprintf("NetworkPollManager.RebuildPollingQueue: couldn't find any devices for the network %s", pm.FFNetworkUUID))
@@ -76,7 +74,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 		pm.PollCompleteStatsUpdate(pp, pollTimeSecs) // This will update the relevant PollManager statistics.
 	}
 
-	point, err := pm.Marshaller.GetPoint(pp.FFPointUUID, nargs.Args{WithPriority: true})
+	point, err := pm.Marshaller.GetPoint(pp.FFPointUUID, &nmodule.Opts{Args: &nargs.Args{WithPriority: true}})
 	if point == nil || err != nil {
 		pm.pollQueueErrorMsg("NetworkPollManager.PollingPointCompleteNotification(): couldn't find point %s", pp.FFPointUUID)
 		return
@@ -422,7 +420,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 		point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 		point.CommonFault.LastOk = time.Now().UTC()
 	}
-	point, err = pm.Marshaller.UpdatePoint(point.UUID, point, nargs.Args{})
+	point, err = pm.Marshaller.UpdatePoint(point.UUID, point, nil)
 	// printPointDebugInfo(point)
 	pm.pollQueuePollingMsg("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
@@ -515,8 +513,7 @@ func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *
 
 	f := func() {
 		pm.pollQueueDebugMsg("Polling Lockout Timer Expired! Polling Priority: %d,  Polling Network: %s", priority, pm.FFNetworkUUID)
-		var arg nargs.Args
-		plugin, err := pm.Marshaller.GetPlugin(pm.FFPluginUUID, arg)
+		plugin, err := pm.Marshaller.GetPlugin(pm.FFPluginUUID, nil)
 		switch priority {
 		case model.PRIORITY_ASAP:
 			pm.ASAPPriorityLockupAlert = true
@@ -593,5 +590,5 @@ func (pm *NetworkPollManager) SetPointPollRequiredFlagsBasedOnWriteMode(point *m
 		point.WritePollRequired = boolean.NewTrue()
 	}
 
-	pm.Marshaller.UpdatePoint(point.UUID, point, nargs.Args{})
+	pm.Marshaller.UpdatePoint(point.UUID, point, nil)
 }
