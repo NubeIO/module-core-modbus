@@ -85,7 +85,7 @@ func (m *Module) ModbusPolling() error {
 
 			pollStartTime := time.Now()
 
-			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID, nil)
+			net, err := m.grpcMarshaller.GetNetwork(netPollMan.FFNetworkUUID)
 			if err != nil || net == nil || net.PluginUUID != m.pluginUUID {
 				m.modbusDebugMsg("MODBUS NETWORK NOT FOUND")
 				continue
@@ -118,7 +118,7 @@ func (m *Module) ModbusPolling() error {
 			netPollMan.PrintPollQueuePointUUIDs()
 			netPollMan.PrintPollingPointDebugInfo(pp)
 
-			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID, nil)
+			dev, err := m.grpcMarshaller.GetDevice(pp.FFDeviceUUID)
 			if dev == nil || err != nil {
 				m.modbusErrorMsg("could not find deviceID:", pp.FFDeviceUUID)
 				netPollMan.PollingFinished(
@@ -425,7 +425,7 @@ func (m *Module) ModbusPolling() error {
 				if counter > 100000 {
 					counter = 100
 				}
-				device, err := m.grpcMarshaller.GetDevice(dev.UUID, nil)
+				device, err := m.grpcMarshaller.GetDevice(dev.UUID)
 				if err != nil || device == nil {
 					continue
 				}

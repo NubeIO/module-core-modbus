@@ -121,14 +121,14 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if err != nil {
 		return nil, err
 	}
-	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
+	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
 	if point == nil || err != nil {
 		m.modbusDebugMsg("addPoint(): failed to create modbus point: ", body.Name)
 		return nil, errors.New(fmt.Sprint("failed to create modbus point. err: ", err))
 	}
 	m.modbusDebugMsg(fmt.Sprintf("addPoint(): %+v\n", point))
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return nil, err
@@ -261,7 +261,7 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 	}
 
 	if boolean.IsTrue(device.Enable) { // If Enabled we need to GetDevice so we get Points
-		device, err = m.grpcMarshaller.GetDevice(device.UUID, nil)
+		device, err = m.grpcMarshaller.GetDevice(device.UUID)
 		if err != nil || device == nil {
 			return nil, err
 		}
@@ -378,13 +378,13 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	body.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 	body.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 	body.CommonFault.LastOk = time.Now().UTC()
-	point, err = m.grpcMarshaller.UpdatePoint(uuid, body, nil)
+	point, err = m.grpcMarshaller.UpdatePoint(uuid, body)
 	if err != nil || point == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from UpdatePoint() err:", err)
 		return nil, err
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID)
 	if err != nil || dev == nil {
 		m.modbusErrorMsg("updatePoint(): bad response from GetDevice()")
 		return nil, err
@@ -444,7 +444,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 	}
 	point = &pnt.Point
 
-	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID, nil)
+	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("writePoint(): bad response from GetDevice()")
 		return nil, err
@@ -483,7 +483,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 					point.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 					point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 					point.CommonFault.LastOk = time.Now().UTC()
-					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
+					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
 					if err != nil || point == nil {
 						m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 						_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): cannot find PollingPoint for point: ", point.UUID), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
@@ -511,7 +511,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 			point.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 			point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 			point.CommonFault.LastOk = time.Now().UTC()
-			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
+			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
 			if err != nil || point == nil {
 				m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
 				_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
@@ -608,7 +608,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 		return
 	}
 
-	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID, nil)
+	dev, err := m.grpcMarshaller.GetDevice(body.DeviceUUID)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
 		return false, err

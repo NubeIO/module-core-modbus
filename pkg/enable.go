@@ -10,7 +10,7 @@ func (m *Module) Enable() error {
 	m.fault = false
 	m.setUUID()
 
-	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName, nil)
+	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName)
 	if err != nil {
 		m.networks = nil
 	} else if nets != nil {

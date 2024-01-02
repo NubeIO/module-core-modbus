@@ -1,7 +1,7 @@
 package pkg
 
 func (m *Module) setUUID() {
-	q, err := m.grpcMarshaller.GetPluginByName(path, nil)
+	q, err := m.grpcMarshaller.GetPluginByName(path)
 	if err != nil {
 		return
 	}
