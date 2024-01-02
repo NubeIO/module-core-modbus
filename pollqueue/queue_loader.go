@@ -7,6 +7,8 @@ import (
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"time"
@@ -89,7 +91,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 	if ok {
 		delete(pm.PollQueue.PointsUpdatedWhilePolling, point.UUID)
 		if val == true { // point needs an ASAP write
-			pp.PollPriority = model.PRIORITY_ASAP
+			pp.PollPriority = datatype.PriorityASAP
 			pp.LockupAlertTimer = pm.MakeLockupTimerFunc(pp.PollPriority) // starts a countdown for queue lockup alerts.
 			pm.PollQueue.AddPollingPoint(pp)                              // re-add to poll queue immediately
 			return
@@ -105,7 +107,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 	}
 
 	switch point.WriteMode {
-	case model.ReadOnce: // ReadOnce          If read_successful then don't re-add.
+	case datatype.ReadOnce: // ReadOnce          If read_successful then don't re-add.
 		point.WritePollRequired = boolean.NewFalse()
 		if retryType == NEVER_RETRY || ((readSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) {
 			point.ReadPollRequired = boolean.NewFalse()
@@ -136,7 +138,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			}
 		}
 
-	case model.ReadOnly: // ReadOnly          Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.ReadOnly: // ReadOnly          Re-add with ReadPollRequired true, WritePollRequired false.
 		point.WritePollRequired = boolean.NewFalse()
 		point.ReadPollRequired = boolean.NewTrue()
 		if ((readSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
@@ -165,7 +167,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			}
 		}
 
-	case model.WriteOnce: // WriteOnce         If write_successful then don't re-add.
+	case datatype.WriteOnce: // WriteOnce         If write_successful then don't re-add.
 		point.ReadPollRequired = boolean.NewFalse()
 		if ((writeSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) || retryType == NEVER_RETRY {
 			point.WritePollRequired = boolean.NewFalse()
@@ -196,7 +198,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			}
 		}
 
-	case model.WriteOnceReadOnce: // WriteOnceReadOnce     If write_successful and read_success then don't re-add.
+	case datatype.WriteOnceReadOnce: // WriteOnceReadOnce     If write_successful and read_success then don't re-add.
 		if (boolean.IsTrue(point.WritePollRequired) && writeSuccess && retryType == NORMAL_RETRY) || retryType == NEVER_RETRY {
 			point.WritePollRequired = boolean.NewFalse()
 			if pp.RepollTimer != nil {
@@ -251,7 +253,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			pm.PollQueue.AddPollingPoint(pp)                              // re-add to poll queue immediately
 		}
 
-	case model.WriteAlways: // WriteAlways       Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
+	case datatype.WriteAlways: // WriteAlways       Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
 		point.ReadPollRequired = boolean.NewFalse()
 		point.WritePollRequired = boolean.NewTrue()
 		if (writeSuccess && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
@@ -282,7 +284,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			}
 		}
 
-	case model.WriteOnceThenRead: // WriteOnceThenRead     If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.WriteOnceThenRead: // WriteOnceThenRead     If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
 		point.ReadPollRequired = boolean.NewTrue()
 		if retryType == NEVER_RETRY {
 			if writeSuccess {
@@ -338,7 +340,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			pm.PollQueue.AddPollingPoint(pp)                              // re-add to poll queue immediately
 		}
 
-	case model.WriteAndMaintain: // WriteAndMaintain    If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
+	case datatype.WriteAndMaintain: // WriteAndMaintain    If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
 		point.ReadPollRequired = boolean.NewTrue()
 		// pm.pollQueueDebugMsg(fmt.Sprintf("WriteAndMaintain point %+v\n", point))
 		if (boolean.IsTrue(point.WritePollRequired) && !writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
@@ -415,8 +417,8 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 	resetFaults := readSuccess || writeSuccess
 	if resetFaults {
 		point.CommonFault.InFault = false
-		point.CommonFault.MessageLevel = model.MessageLevel.Info
-		point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
+		point.CommonFault.MessageLevel = dto.MessageLevel.Info
+		point.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 		point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 		point.CommonFault.LastOk = time.Now().UTC()
 	}
@@ -425,7 +427,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 	pm.pollQueuePollingMsg("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
-func (pm *NetworkPollManager) MakePollingPointRepollCallback(pp *PollingPoint, writeMode model.WriteMode) func() {
+func (pm *NetworkPollManager) MakePollingPointRepollCallback(pp *PollingPoint, writeMode datatype.WriteMode) func() {
 	// log.Info("MakePollingPointRepollCallback()")
 	f := func() {
 		// pm.pollQueueDebugMsg(fmt.Sprintf("CALL PollingPointRepollCallback func() pp: %+v", pp))
@@ -493,20 +495,20 @@ func (pm *NetworkPollManager) MakePollingPointRepollCallback(pp *PollingPoint, w
 	return f
 }
 
-func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *time.Timer {
+func (pm *NetworkPollManager) MakeLockupTimerFunc(priority datatype.PollPriority) *time.Timer {
 	timeoutDuration := 5 * time.Minute
 
 	switch priority {
-	case model.PRIORITY_ASAP:
+	case datatype.PriorityASAP:
 		timeoutDuration = pm.ASAPPriorityMaxCycleTime
 
-	case model.PRIORITY_HIGH:
+	case datatype.PriorityHigh:
 		timeoutDuration = pm.HighPriorityMaxCycleTime
 
-	case model.PRIORITY_NORMAL:
+	case datatype.PriorityNormal:
 		timeoutDuration = pm.NormalPriorityMaxCycleTime
 
-	case model.PRIORITY_LOW:
+	case datatype.PriorityLow:
 		timeoutDuration = pm.LowPriorityMaxCycleTime
 
 	}
@@ -515,7 +517,7 @@ func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *
 		pm.pollQueueDebugMsg("Polling Lockout Timer Expired! Polling Priority: %d,  Polling Network: %s", priority, pm.FFNetworkUUID)
 		plugin, err := pm.Marshaller.GetPlugin(pm.FFPluginUUID, nil)
 		switch priority {
-		case model.PRIORITY_ASAP:
+		case datatype.PriorityASAP:
 			pm.ASAPPriorityLockupAlert = true
 			if plugin != nil && err == nil {
 				pm.pollQueueErrorMsg(fmt.Sprintf("%s Plugin: ASAP Priority Poll Queue LOCKUP", plugin.Name))
@@ -524,7 +526,7 @@ func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *
 			}
 			// TODO: update network error to show queue lockup
 
-		case model.PRIORITY_HIGH:
+		case datatype.PriorityHigh:
 			pm.HighPriorityLockupAlert = true
 			if plugin != nil && err == nil {
 				pm.pollQueueErrorMsg(fmt.Sprintf("%s Plugin: HIGH Priority Poll Queue LOCKUP", plugin.Name))
@@ -533,7 +535,7 @@ func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *
 			}
 			// TODO: update network error to show queue lockup
 
-		case model.PRIORITY_NORMAL:
+		case datatype.PriorityNormal:
 			pm.NormalPriorityLockupAlert = true
 			if plugin != nil && err == nil {
 				pm.pollQueueErrorMsg(fmt.Sprintf("%s Plugin: NORMAL Priority Poll Queue LOCKUP", plugin.Name))
@@ -542,7 +544,7 @@ func (pm *NetworkPollManager) MakeLockupTimerFunc(priority model.PollPriority) *
 			}
 			// TODO: update network error to show queue lockup
 
-		case model.PRIORITY_LOW:
+		case datatype.PriorityLow:
 			pm.LowPriorityLockupAlert = true
 			if plugin != nil && err == nil {
 				pm.pollQueueErrorMsg(fmt.Sprintf("%s Plugin: LOW Priority Poll Queue LOCKUP", plugin.Name))
@@ -564,28 +566,28 @@ func (pm *NetworkPollManager) SetPointPollRequiredFlagsBasedOnWriteMode(point *m
 	}
 
 	switch point.WriteMode {
-	case model.ReadOnce:
+	case datatype.ReadOnce:
 		return
 
-	case model.ReadOnly: // ReadOnly          Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.ReadOnly: // ReadOnly          Re-add with ReadPollRequired true, WritePollRequired false.
 		point.ReadPollRequired = boolean.NewTrue()
 		point.WritePollRequired = boolean.NewFalse()
 
-	case model.WriteOnce: // WriteOnce         If write_successful then don't re-add.
+	case datatype.WriteOnce: // WriteOnce         If write_successful then don't re-add.
 		return
 
-	case model.WriteOnceReadOnce: // WriteOnceReadOnce     If write_successful and read_success then don't re-add.
+	case datatype.WriteOnceReadOnce: // WriteOnceReadOnce     If write_successful and read_success then don't re-add.
 		return
 
-	case model.WriteAlways: // WriteAlways       Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
+	case datatype.WriteAlways: // WriteAlways       Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
 		point.ReadPollRequired = boolean.NewFalse()
 		point.WritePollRequired = boolean.NewTrue()
 
-	case model.WriteOnceThenRead: // WriteOnceThenRead     If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.WriteOnceThenRead: // WriteOnceThenRead     If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
 		point.ReadPollRequired = boolean.NewTrue()
 		point.WritePollRequired = boolean.NewTrue()
 
-	case model.WriteAndMaintain: // WriteAndMaintain    If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
+	case datatype.WriteAndMaintain: // WriteAndMaintain    If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
 		point.ReadPollRequired = boolean.NewTrue()
 		point.WritePollRequired = boolean.NewTrue()
 	}

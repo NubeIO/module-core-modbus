@@ -2,14 +2,15 @@ package pollqueue
 
 import (
 	"fmt"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"math"
 	"time"
 )
 
-func (pm *NetworkPollManager) GetPollingQueueStatistics() *model.PollQueueStatistics {
+func (pm *NetworkPollManager) GetPollingQueueStatistics() *dto.PollQueueStatistics {
 	pm.pollQueueDebugMsg("GetPollingQueueStatistics()")
-	stats := model.PollQueueStatistics{}
+	stats := dto.PollQueueStatistics{}
 	stats.Enable = pm.Enable
 	stats.MaxPollRate = pm.MaxPollRate.String()
 
@@ -114,13 +115,13 @@ func (pm *NetworkPollManager) PollCompleteStatsUpdate(pp *PollingPoint, pollTime
 	for _, pp := range pm.PollQueue.PriorityQueue.PriorityQueue {
 		if pp != nil {
 			switch pp.PollPriority {
-			case model.PRIORITY_ASAP:
+			case datatype.PriorityASAP:
 				pm.ASAPPriorityPollQueueLength++
-			case model.PRIORITY_HIGH:
+			case datatype.PriorityHigh:
 				pm.HighPriorityPollQueueLength++
-			case model.PRIORITY_NORMAL:
+			case datatype.PriorityNormal:
 				pm.NormalPriorityPollQueueLength++
-			case model.PRIORITY_LOW:
+			case datatype.PriorityLow:
 				pm.LowPriorityPollQueueLength++
 			}
 		}
@@ -128,7 +129,7 @@ func (pm *NetworkPollManager) PollCompleteStatsUpdate(pp *PollingPoint, pollTime
 	pm.TotalPollQueueLength = int64(pm.PollQueue.PriorityQueue.Len())
 
 	switch pp.PollPriority {
-	case model.PRIORITY_ASAP:
+	case datatype.PriorityASAP:
 		pm.ASAPPriorityPollCount++
 		if pp.QueueEntryTime <= 0 {
 			return
@@ -137,7 +138,7 @@ func (pm *NetworkPollManager) PollCompleteStatsUpdate(pp *PollingPoint, pollTime
 		pm.ASAPPriorityAveragePollTime = ((pm.ASAPPriorityAveragePollTime * float64(pm.ASAPPriorityPollCountForAvg)) + pollTime) / (float64(pm.ASAPPriorityPollCountForAvg) + 1)
 		pm.ASAPPriorityPollCountForAvg++
 
-	case model.PRIORITY_HIGH:
+	case datatype.PriorityHigh:
 		pm.HighPriorityPollCount++
 		if pp.QueueEntryTime <= 0 {
 			return
@@ -146,7 +147,7 @@ func (pm *NetworkPollManager) PollCompleteStatsUpdate(pp *PollingPoint, pollTime
 		pm.HighPriorityAveragePollTime = ((pm.HighPriorityAveragePollTime * float64(pm.HighPriorityPollCountForAvg)) + pollTime) / (float64(pm.HighPriorityPollCountForAvg) + 1)
 		pm.HighPriorityPollCountForAvg++
 
-	case model.PRIORITY_NORMAL:
+	case datatype.PriorityNormal:
 		pm.NormalPriorityPollCount++
 		if pp.QueueEntryTime <= 0 {
 			return
@@ -155,7 +156,7 @@ func (pm *NetworkPollManager) PollCompleteStatsUpdate(pp *PollingPoint, pollTime
 		pm.NormalPriorityAveragePollTime = ((pm.NormalPriorityAveragePollTime * float64(pm.NormalPriorityPollCountForAvg)) + pollTime) / (float64(pm.NormalPriorityPollCountForAvg) + 1)
 		pm.NormalPriorityPollCountForAvg++
 
-	case model.PRIORITY_LOW:
+	case datatype.PriorityLow:
 		pm.LowPriorityPollCount++
 		if pp.QueueEntryTime <= 0 {
 			return
@@ -189,13 +190,13 @@ func (pm *NetworkPollManager) PartialPollStatsUpdate() {
 	for _, pp := range pm.PollQueue.PriorityQueue.PriorityQueue {
 		if pp != nil {
 			switch pp.PollPriority {
-			case model.PRIORITY_ASAP:
+			case datatype.PriorityASAP:
 				pm.ASAPPriorityPollQueueLength++
-			case model.PRIORITY_HIGH:
+			case datatype.PriorityHigh:
 				pm.HighPriorityPollQueueLength++
-			case model.PRIORITY_NORMAL:
+			case datatype.PriorityNormal:
 				pm.NormalPriorityPollQueueLength++
-			case model.PRIORITY_LOW:
+			case datatype.PriorityLow:
 				pm.LowPriorityPollQueueLength++
 			}
 		}

@@ -11,6 +11,8 @@ import (
 	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"go.bug.st/serial"
@@ -51,14 +53,14 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 		err = m.networkUpdateErr(
 			network,
 			"network disabled",
-			model.MessageLevel.Warning,
-			model.CommonFaultCode.NetworkError,
+			dto.MessageLevel.Warning,
+			dto.CommonFaultCode.NetworkError,
 		)
 		err = m.grpcMarshaller.UpdateNetworkDescendantsErrors(
 			network.UUID,
 			"network disabled",
-			model.MessageLevel.Warning,
-			model.CommonFaultCode.NetworkError,
+			dto.MessageLevel.Warning,
+			dto.CommonFaultCode.NetworkError,
 			true,
 		)
 	}
@@ -80,12 +82,12 @@ func (m *Module) addDevice(body *model.Device) (device *model.Device, err error)
 	m.modbusDebugMsg("addDevice(): ", body.UUID)
 
 	if boolean.IsFalse(device.Enable) {
-		err = m.deviceUpdateErr(device, "device disabled", model.MessageLevel.Warning, model.CommonFaultCode.DeviceError)
+		err = m.deviceUpdateErr(device, "device disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.DeviceError)
 		err = m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 			device.UUID,
 			"device disabled",
-			model.MessageLevel.Warning,
-			model.CommonFaultCode.DeviceError,
+			dto.MessageLevel.Warning,
+			dto.CommonFaultCode.DeviceError,
 		)
 	}
 
@@ -157,7 +159,7 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 			true,
 		)
 	} else {
-		err = m.pointUpdateErr(point, "point disabled", model.MessageLevel.Warning, model.CommonFaultCode.PointError)
+		err = m.pointUpdateErr(point, "point disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.PointError)
 	}
 
 	return point, nil
@@ -175,14 +177,14 @@ func (m *Module) updateNetwork(uuid string, body *model.Network) (network *model
 
 	if boolean.IsFalse(body.Enable) {
 		body.CommonFault.InFault = true
-		body.CommonFault.MessageLevel = model.MessageLevel.Warning
-		body.CommonFault.MessageCode = model.CommonFaultCode.NetworkError
+		body.CommonFault.MessageLevel = dto.MessageLevel.Warning
+		body.CommonFault.MessageCode = dto.CommonFaultCode.NetworkError
 		body.CommonFault.Message = "network disabled"
 		body.CommonFault.LastFail = time.Now().UTC()
 	} else {
 		body.CommonFault.InFault = false
-		body.CommonFault.MessageLevel = model.MessageLevel.Info
-		body.CommonFault.MessageCode = model.CommonFaultCode.Ok
+		body.CommonFault.MessageLevel = dto.MessageLevel.Info
+		body.CommonFault.MessageCode = dto.CommonFaultCode.Ok
 		body.CommonFault.Message = ""
 		body.CommonFault.LastOk = time.Now().UTC()
 	}
@@ -213,8 +215,8 @@ func (m *Module) updateNetwork(uuid string, body *model.Network) (network *model
 		m.grpcMarshaller.UpdateNetworkDescendantsErrors(
 			network.UUID,
 			"network disabled",
-			model.MessageLevel.Warning,
-			model.CommonFaultCode.DeviceError,
+			dto.MessageLevel.Warning,
+			dto.CommonFaultCode.DeviceError,
 			true,
 		)
 	} else if restartPolling || (boolean.IsTrue(network.Enable) && netPollMan.Enable == false) {
@@ -242,14 +244,14 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 
 	if boolean.IsFalse(body.Enable) {
 		body.CommonFault.InFault = true
-		body.CommonFault.MessageLevel = model.MessageLevel.Warning
-		body.CommonFault.MessageCode = model.CommonFaultCode.DeviceError
+		body.CommonFault.MessageLevel = dto.MessageLevel.Warning
+		body.CommonFault.MessageCode = dto.CommonFaultCode.DeviceError
 		body.CommonFault.Message = "device disabled"
 		body.CommonFault.LastFail = time.Now().UTC()
 	} else {
 		body.CommonFault.InFault = false
-		body.CommonFault.MessageLevel = model.MessageLevel.Info
-		body.CommonFault.MessageCode = model.CommonFaultCode.Ok
+		body.CommonFault.MessageLevel = dto.MessageLevel.Info
+		body.CommonFault.MessageCode = dto.CommonFaultCode.Ok
 		body.CommonFault.LastOk = time.Now().UTC()
 	}
 
@@ -275,8 +277,8 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 		m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 			device.UUID,
 			"device disabled",
-			model.MessageLevel.Warning,
-			model.CommonFaultCode.DeviceError,
+			dto.MessageLevel.Warning,
+			dto.CommonFaultCode.DeviceError,
 		)
 		netPollMan.PollQueue.RemovePollingPointByDeviceUUID(device.UUID)
 
@@ -309,8 +311,8 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 	} else if boolean.IsTrue(device.Enable) {
 		// TODO: Currently on every device update, all device points are removed, and re-added.
 		device.CommonFault.InFault = false
-		device.CommonFault.MessageLevel = model.MessageLevel.Info
-		device.CommonFault.MessageCode = model.CommonFaultCode.Ok
+		device.CommonFault.MessageLevel = dto.MessageLevel.Info
+		device.CommonFault.MessageCode = dto.CommonFaultCode.Ok
 		device.CommonFault.Message = ""
 		device.CommonFault.LastOk = time.Now().UTC()
 		netPollMan.PollQueue.RemovePollingPointByDeviceUUID(device.UUID)
@@ -366,14 +368,14 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 
 	if boolean.IsFalse(body.Enable) {
 		body.CommonFault.InFault = true
-		body.CommonFault.MessageLevel = model.MessageLevel.Fail
-		body.CommonFault.MessageCode = model.CommonFaultCode.PointError
+		body.CommonFault.MessageLevel = dto.MessageLevel.Fail
+		body.CommonFault.MessageCode = dto.CommonFaultCode.PointError
 		body.CommonFault.Message = "point disabled"
 		body.CommonFault.LastFail = time.Now().UTC()
 	}
 	body.CommonFault.InFault = false
-	body.CommonFault.MessageLevel = model.MessageLevel.Info
-	body.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
+	body.CommonFault.MessageLevel = dto.MessageLevel.Info
+	body.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 	body.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 	body.CommonFault.LastOk = time.Now().UTC()
 	point, err = m.grpcMarshaller.UpdatePoint(uuid, body, nil)
@@ -394,8 +396,8 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 		_ = m.pointUpdateErr(
 			point,
 			"cannot find NetworkPollManager for network",
-			model.MessageLevel.Fail,
-			model.CommonFaultCode.SystemError,
+			dto.MessageLevel.Fail,
+			dto.CommonFaultCode.SystemError,
 		)
 		return
 	}
@@ -426,7 +428,7 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	return point, nil
 }
 
-func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *model.Point, err error) {
+func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model.Point, err error) {
 	// TODO: Check for PointWriteByName calls that might not flow through the plugin.
 	point = nil
 	m.modbusDebugMsg("writePoint(): ", pntUUID)
@@ -451,23 +453,23 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusDebugMsg("writePoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(point, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
+		_ = m.pointUpdateErr(point, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return nil, err
 	}
 
 	if boolean.IsTrue(point.Enable) {
 		// If the write value has changed, we need to re-add the point so that it is polled asap (if required)
 		if pnt.IsWriteValueChange ||
-			point.WriteMode == model.WriteOnceReadOnce ||
-			point.WriteMode == model.WriteOnce ||
-			(point.WriteMode == model.WriteOnceThenRead && *point.WriteValue != *point.OriginalValue) {
+			point.WriteMode == datatype.WriteOnceReadOnce ||
+			point.WriteMode == datatype.WriteOnce ||
+			(point.WriteMode == datatype.WriteOnceThenRead && *point.WriteValue != *point.OriginalValue) {
 			pp, _ := netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
 			if pp == nil {
 				if netPollMan.PollQueue.OutstandingPollingPoints.GetPollingPointIndexByPointUUID(point.UUID) > -1 {
 					if writemode.IsWriteable(point.WriteMode) {
 						netPollMan.PollQueue.PointsUpdatedWhilePolling[point.UUID] = true // This triggers a write post at ASAP priority (for writeable points).
 						point.WritePollRequired = boolean.NewTrue()
-						if point.WriteMode != model.WriteAlways && point.WriteMode != model.WriteOnce {
+						if point.WriteMode != datatype.WriteAlways && point.WriteMode != datatype.WriteOnce {
 							point.ReadPollRequired = boolean.NewTrue()
 						} else {
 							point.ReadPollRequired = boolean.NewFalse()
@@ -477,20 +479,20 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 						point.WritePollRequired = boolean.NewFalse()
 					}
 					point.CommonFault.InFault = false
-					point.CommonFault.MessageLevel = model.MessageLevel.Info
-					point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
+					point.CommonFault.MessageLevel = dto.MessageLevel.Info
+					point.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 					point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 					point.CommonFault.LastOk = time.Now().UTC()
 					point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
 					if err != nil || point == nil {
 						m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
-						_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): cannot find PollingPoint for point: ", point.UUID), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
+						_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): cannot find PollingPoint for point: ", point.UUID), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 						return point, err
 					}
 					return point, nil
 				} else {
 					m.modbusDebugMsg("writePoint(): cannot find PollingPoint for point (could be out for polling: ", point.UUID)
-					_ = m.pointUpdateErr(point, "writePoint(): cannot find PollingPoint for point: ", model.MessageLevel.Fail, model.CommonFaultCode.PointWriteError)
+					_ = m.pointUpdateErr(point, "writePoint(): cannot find PollingPoint for point: ", dto.MessageLevel.Fail, dto.CommonFaultCode.PointWriteError)
 					return point, err
 				}
 			}
@@ -499,24 +501,24 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 			} else {
 				point.WritePollRequired = boolean.NewFalse()
 			}
-			if point.WriteMode != model.WriteAlways && point.WriteMode != model.WriteOnce {
+			if point.WriteMode != datatype.WriteAlways && point.WriteMode != datatype.WriteOnce {
 				point.ReadPollRequired = boolean.NewTrue()
 			} else {
 				point.ReadPollRequired = boolean.NewFalse()
 			}
 			point.CommonFault.InFault = false
-			point.CommonFault.MessageLevel = model.MessageLevel.Info
-			point.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
+			point.CommonFault.MessageLevel = dto.MessageLevel.Info
+			point.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 			point.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 			point.CommonFault.LastOk = time.Now().UTC()
 			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point, nil)
 			if err != nil || point == nil {
 				m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
-				_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
+				_ = m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 				return point, err
 			}
 
-			// pp.PollPriority = model.PRIORITY_ASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
+			// pp.PollPriority = model.PriorityASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
 
 			// This will perform the queue re-add actions based on Point WriteMode.
 			// TODO: Check function of pointUpdate argument.
@@ -533,7 +535,7 @@ func (m *Module) writePoint(pntUUID string, body *model.PointWriter) (point *mod
 				true,
 			)
 			// netPollMan.PollQueue.AddPollingPoint(pp)
-			// netPollMan.PollQueue.UpdatePollingPointByPointUUID(point.UUID, model.PRIORITY_ASAP)
+			// netPollMan.PollQueue.UpdatePollingPointByPointUUID(point.UUID, model.PriorityASAP)
 
 			/*
 				netPollMan.PollQueue.RemovePollingPointByPointUUID(body.UUID)
@@ -588,7 +590,7 @@ func (m *Module) deleteDevice(body *model.Device) (ok bool, err error) {
 	netPollMan, err := m.getNetworkPollManagerByUUID(body.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusDebugMsg("deleteDevice(): cannot find NetworkPollManager for network: ", body.NetworkUUID)
-		_ = m.deviceUpdateErr(body, "cannot find NetworkPollManager for network", model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
+		_ = m.deviceUpdateErr(body, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return
 	}
 	netPollMan.PollQueue.RemovePollingPointByDeviceUUID(body.UUID)
@@ -615,7 +617,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusDebugMsg("addPoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(body, "cannot find NetworkPollManager for network", model.MessageLevel.Fail, model.CommonFaultCode.SystemError)
+		_ = m.pointUpdateErr(body, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return
 	}
 
@@ -708,7 +710,7 @@ func (m *Module) listSerialPorts() (*array.Array, error) {
 	return p, err
 }
 
-func (m *Module) getPollingStats(networkName string) (result *model.PollQueueStatistics, error error) {
+func (m *Module) getPollingStats(networkName string) (result *dto.PollQueueStatistics, error error) {
 	if len(m.NetworkPollManagers) == 0 {
 		return nil, errors.New("couldn't find any plugin network poll managers")
 	}

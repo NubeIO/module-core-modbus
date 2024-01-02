@@ -15,6 +15,8 @@ import (
 	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	log "github.com/sirupsen/logrus"
@@ -45,12 +47,12 @@ func (m *Module) getNetworkPollManagerByUUID(netUUID string) (*pollqueue.Network
 
 func (m *Module) updateNetworkMessage(network *model.Network, message string, err error, loopCount int) {
 	if err != nil {
-		err = m.networkUpdateErr(network, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.NetworkError)
+		err = m.networkUpdateErr(network, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.NetworkError)
 		if err != nil {
 			log.Errorf("modbus failed to update network err: %s", err)
 		}
 	} else {
-		err = m.networkUpdateMessage(network, fmt.Sprintf("%s poll count: %d", message, loopCount), model.MessageLevel.Normal, model.CommonFaultCode.Ok)
+		err = m.networkUpdateMessage(network, fmt.Sprintf("%s poll count: %d", message, loopCount), dto.MessageLevel.Normal, dto.CommonFaultCode.Ok)
 		if err != nil {
 			log.Errorf("modbus failed to update network err: %s", err)
 		}
@@ -136,8 +138,8 @@ func (m *Module) ModbusPolling() error {
 				m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 					dev.UUID,
 					"device disabled",
-					model.MessageLevel.Warning,
-					model.CommonFaultCode.DeviceError,
+					dto.MessageLevel.Warning,
+					dto.CommonFaultCode.DeviceError,
 				)
 				netPollMan.PollingFinished(
 					pp,
@@ -156,8 +158,8 @@ func (m *Module) ModbusPolling() error {
 				m.grpcMarshaller.UpdateDeviceDescendantsErrors(
 					dev.UUID,
 					"address out of range",
-					model.MessageLevel.Critical,
-					model.CommonFaultCode.ConfigError,
+					dto.MessageLevel.Critical,
+					dto.CommonFaultCode.ConfigError,
 				)
 				netPollMan.PollingFinished(
 					pp,
@@ -267,11 +269,11 @@ func (m *Module) ModbusPolling() error {
 				)
 				continue
 			}
-			if net.TransportType == model.TransType.Serial || net.TransportType == model.TransType.LoRa {
+			if net.TransportType == dto.TransType.Serial || net.TransportType == dto.TransType.LoRa {
 				if dev.AddressId >= 1 {
 					mbClient.RTUClientHandler.SlaveID = byte(dev.AddressId)
 				}
-			} else if dev.TransportType == model.TransType.IP {
+			} else if dev.TransportType == dto.TransType.IP {
 				url, err := nurl.JoinIPPort(nurl.Parts{Host: dev.Host, Port: strconv.Itoa(dev.Port)})
 				if err != nil {
 					errMes := fmt.Sprintf("failed to validate network IP: %s", url)
@@ -305,7 +307,7 @@ func (m *Module) ModbusPolling() error {
 			if boolean.IsTrue(pnt.ReadPollRequired) && (boolean.IsFalse(pnt.WritePollRequired) || (bitwiseType && boolean.IsTrue(pnt.WritePollRequired))) { // DO READ IF REQUIRED
 				readResponse, readResponseValue, err = m.networkRead(mbClient, pnt)
 				if err != nil {
-					err = m.pointUpdateErr(pnt, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.PointError)
+					err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 					netPollMan.PollingFinished(pp, pollStartTime, false, false, true, false, pollqueue.IMMEDIATE_RETRY, callback)
 					continue
 				}
@@ -314,7 +316,7 @@ func (m *Module) ModbusPolling() error {
 					bitValue, err = getBitFromFloat64(readResponseValue, *pnt.BitwiseIndex)
 					if err != nil {
 						m.modbusDebugMsg("Bitwise Error: ", err)
-						err = m.pointUpdateErr(pnt, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.PointError)
+						err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 						netPollMan.PollingFinished(pp, pollStartTime, false, false, true, false, pollqueue.DELAYED_RETRY, callback)
 						continue
 					}
@@ -338,7 +340,7 @@ func (m *Module) ModbusPolling() error {
 					}
 					if bitwiseType {
 						if !readSuccess || math.Mod(readResponseValue, 1) != 0 {
-							err = m.pointUpdateErr(pnt, "read fail: bitwise point needs successful read before write", model.MessageLevel.Fail, model.CommonFaultCode.PointError)
+							err = m.pointUpdateErr(pnt, "read fail: bitwise point needs successful read before write", dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 							netPollMan.PollingFinished(pp, pollStartTime, false, false, true, false, pollqueue.DELAYED_RETRY, callback)
 							continue
 						}
@@ -354,7 +356,7 @@ func (m *Module) ModbusPolling() error {
 					}
 					writeResponse, writeResponseValue, err = m.networkWrite(mbClient, pnt)
 					if err != nil {
-						err = m.pointUpdateErr(pnt, err.Error(), model.MessageLevel.Fail, model.CommonFaultCode.PointWriteError)
+						err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointWriteError)
 						netPollMan.PollingFinished(pp, pollStartTime, false, false, true, false, pollqueue.IMMEDIATE_RETRY, callback)
 						continue
 					}
@@ -397,7 +399,7 @@ func (m *Module) ModbusPolling() error {
 
 			// Update point in DB if required
 			// For write_once and write_always type, write value should become present value
-			writeValueToPresentVal := (pnt.WriteMode == model.WriteOnce || pnt.WriteMode == model.WriteAlways) && writeSuccess && pnt.WriteValue != nil
+			writeValueToPresentVal := (pnt.WriteMode == datatype.WriteOnce || pnt.WriteMode == datatype.WriteAlways) && writeSuccess && pnt.WriteValue != nil
 
 			if readSuccess || writeSuccess || writeValueToPresentVal {
 				if writeValueToPresentVal {
@@ -409,8 +411,8 @@ func (m *Module) ModbusPolling() error {
 				pnt.IsTypeBool = nils.NewBool(isTypeBool)
 
 				pnt.CommonFault.InFault = false
-				pnt.CommonFault.MessageLevel = model.MessageLevel.Info
-				pnt.CommonFault.MessageCode = model.CommonFaultCode.PointWriteOk
+				pnt.CommonFault.MessageLevel = dto.MessageLevel.Info
+				pnt.CommonFault.MessageCode = dto.CommonFaultCode.PointWriteOk
 				pnt.CommonFault.Message = fmt.Sprintf("last-updated: %s", utilstime.TimeStamp())
 				pnt.CommonFault.LastOk = time.Now().UTC()
 				m.pointUpdate(pnt, newValue, readSuccess || writeSuccess)

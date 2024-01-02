@@ -2,26 +2,27 @@ package writemode
 
 import (
 	"github.com/NubeIO/lib-utils-go/boolean"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 )
 
 func SetPriorityArrayModeBasedOnWriteMode(pnt *model.Point) bool {
 	switch pnt.WriteMode {
-	case model.ReadOnce, model.ReadOnly:
-		pnt.PointPriorityArrayMode = model.ReadOnlyNoPriorityArrayRequired
+	case datatype.ReadOnce, datatype.ReadOnly:
+		pnt.PointPriorityArrayMode = datatype.ReadOnlyNoPriorityArrayRequired
 		return true
-	case model.WriteOnce, model.WriteOnceReadOnce, model.WriteAlways, model.WriteOnceThenRead, model.WriteAndMaintain:
-		pnt.PointPriorityArrayMode = model.PriorityArrayToWriteValue
+	case datatype.WriteOnce, datatype.WriteOnceReadOnce, datatype.WriteAlways, datatype.WriteOnceThenRead, datatype.WriteAndMaintain:
+		pnt.PointPriorityArrayMode = datatype.PriorityArrayToWriteValue
 		return true
 	}
 	return false
 }
 
-func IsWriteable(writeMode model.WriteMode) bool {
+func IsWriteable(writeMode datatype.WriteMode) bool {
 	switch writeMode {
-	case model.ReadOnce, model.ReadOnly:
+	case datatype.ReadOnce, datatype.ReadOnly:
 		return false
-	case model.WriteOnce, model.WriteOnceReadOnce, model.WriteAlways, model.WriteOnceThenRead, model.WriteAndMaintain:
+	case datatype.WriteOnce, datatype.WriteOnceReadOnce, datatype.WriteAlways, datatype.WriteOnceThenRead, datatype.WriteAndMaintain:
 		return true
 	default:
 		return false

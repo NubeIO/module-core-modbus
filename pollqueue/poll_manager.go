@@ -6,7 +6,7 @@ import (
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"time"
 )
@@ -174,7 +174,7 @@ func NewPollManager(conf *Config, marshaller nmodule.Marshaller, ffNetworkUUID, 
 	return pm
 }
 
-func (pm *NetworkPollManager) GetPollRateDuration(rate model.PollRate, deviceUUID string) time.Duration {
+func (pm *NetworkPollManager) GetPollRateDuration(rate datatype.PollRate, deviceUUID string) time.Duration {
 	var duration time.Duration
 
 	if pm.Marshaller != nil {
@@ -185,7 +185,7 @@ func (pm *NetworkPollManager) GetPollRateDuration(rate model.PollRate, deviceUUI
 		}
 		// Get durations from device
 		switch rate {
-		case model.RATE_FAST:
+		case datatype.RateFast:
 			fastRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.FastPollRate)))
 			if fastRateDuration <= 100*time.Millisecond {
 				duration = 10 * time.Second
@@ -193,7 +193,7 @@ func (pm *NetworkPollManager) GetPollRateDuration(rate model.PollRate, deviceUUI
 				duration = fastRateDuration
 			}
 
-		case model.RATE_NORMAL:
+		case datatype.RateNormal:
 			normalRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.NormalPollRate)))
 			if normalRateDuration <= 500*time.Millisecond {
 				duration = 30 * time.Second
@@ -201,7 +201,7 @@ func (pm *NetworkPollManager) GetPollRateDuration(rate model.PollRate, deviceUUI
 				duration = normalRateDuration
 			}
 
-		case model.RATE_SLOW:
+		case datatype.RateSlow:
 			slowRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.SlowPollRate)))
 			if slowRateDuration <= 1*time.Second {
 				duration = 120 * time.Second

@@ -1,7 +1,7 @@
 package smod
 
 import (
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/grid-x/modbus"
 	log "github.com/sirupsen/logrus"
 	"strings"
@@ -74,43 +74,43 @@ func (mc *ModbusClient) ReadInputRegisters(addr uint16, quantity uint16, dataTyp
 	}
 
 	switch dataType {
-	case string(model.TypeInt16):
+	case string(datatype.TypeInt16):
 		// Decode payload bytes as int16s
 		decode := bytesToInt16s(mc.Endianness, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint16):
+	case string(datatype.TypeUint16):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint16s(mc.Endianness, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeInt32):
+	case string(datatype.TypeInt32):
 		// Decode payload bytes as uint16s
 		decode := bytesToInt32s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint32):
+	case string(datatype.TypeUint32):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint32s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeInt64):
+	case string(datatype.TypeInt64):
 		// Decode payload bytes as uint16s
 		decode := bytesToInt64s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint64):
+	case string(datatype.TypeUint64):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint64s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeMod10_u32):
+	case string(datatype.TypeMod10U32):
 		// decode payload bytes as uint16s, then do R2*10,000 + R1
 		decode := bytesToMod10_u32(mc.Endianness, mc.WordOrder, raw)
 		out = decode[0]
@@ -133,43 +133,43 @@ func (mc *ModbusClient) ReadHoldingRegisters(addr uint16, quantity uint16, dataT
 	}
 
 	switch dataType {
-	case string(model.TypeInt16):
+	case string(datatype.TypeInt16):
 		// Decode payload bytes as int16s
 		decode := bytesToInt16s(mc.Endianness, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint16):
+	case string(datatype.TypeUint16):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint16s(mc.Endianness, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeInt32):
+	case string(datatype.TypeInt32):
 		// Decode payload bytes as uint16s
 		decode := bytesToInt32s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint32):
+	case string(datatype.TypeUint32):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint32s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeInt64):
+	case string(datatype.TypeInt64):
 		// Decode payload bytes as uint16s
 		decode := bytesToInt64s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeUint64):
+	case string(datatype.TypeUint64):
 		// Decode payload bytes as uint16s
 		decode := bytesToUint64s(mc.Endianness, mc.WordOrder, raw)
 		if len(decode) >= 0 {
 			out = float64(decode[0])
 		}
-	case string(model.TypeMod10_u32):
+	case string(datatype.TypeMod10U32):
 		// decode payload bytes as uint16s, then do R2*10,000 + R1
 		decode := bytesToMod10_u32(mc.Endianness, mc.WordOrder, raw)
 		out = decode[0]

@@ -8,6 +8,7 @@ import (
 	"github.com/NubeIO/lib-module-go/router"
 	"github.com/NubeIO/module-core-modbus/schema"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"net/http"
 )
@@ -201,7 +202,7 @@ func DeletePoint(m *nmodule.Module, r *router.Request) ([]byte, error) {
 }
 
 func PointWrite(m *nmodule.Module, r *router.Request) ([]byte, error) {
-	var pw *model.PointWriter
+	var pw *dto.PointWriter
 	err := json.Unmarshal(r.Body, &pw)
 	if err != nil {
 		return nil, err
@@ -230,31 +231,31 @@ func GetNetworkPollingStats(m *nmodule.Module, r *router.Request) ([]byte, error
 }
 
 func CreatePointOperation(m *nmodule.Module, r *router.Request) ([]byte, error) {
-	var dto Body
-	err := json.Unmarshal(r.Body, &dto)
+	var body Body
+	err := json.Unmarshal(r.Body, &body)
 	if err != nil {
 		return nil, err
 	}
-	netType := dto.Network.TransportType
-	mbClient, err := (*m).(*Module).setClient(dto.Network, dto.Device, false)
+	netType := body.Network.TransportType
+	mbClient, err := (*m).(*Module).setClient(body.Network, body.Device, false)
 	if err != nil {
 		(*m).(*Module).modbusErrorMsg(err, "ERROR ON set modbus client")
 		return nil, err
 	}
-	if netType == model.TransType.Serial || netType == model.TransType.LoRa {
-		if dto.Device.AddressId >= 1 {
-			mbClient.RTUClientHandler.SlaveID = byte(dto.Device.AddressId)
+	if netType == dto.TransType.Serial || netType == dto.TransType.LoRa {
+		if body.Device.AddressId >= 1 {
+			mbClient.RTUClientHandler.SlaveID = byte(body.Device.AddressId)
 		}
-	} else if netType == model.TransType.IP {
-		url, err := uurl.JoinIpPort(dto.Device.Host, dto.Device.Port)
+	} else if netType == dto.TransType.IP {
+		url, err := uurl.JoinIpPort(body.Device.Host, body.Device.Port)
 		if err != nil {
 			(*m).(*Module).modbusErrorMsg(fmt.Sprintf("failed to validate device IP %s\n", url))
 			return nil, err
 		}
 		mbClient.TCPClientHandler.Address = url
-		mbClient.TCPClientHandler.SlaveID = byte(dto.Device.AddressId)
+		mbClient.TCPClientHandler.SlaveID = byte(body.Device.AddressId)
 	}
-	_, responseValue, err := (*m).(*Module).networkRequest(mbClient, dto.Point, false)
+	_, responseValue, err := (*m).(*Module).networkRequest(mbClient, body.Point, false)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/NubeIO/lib-utils-go/nstring"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -102,7 +102,7 @@ func (nq *NetworkPriorityPollQueue) RemovePollingPointByDeviceUUID(deviceUUID st
 	nq.RemoveDeviceFromActiveDevicesList(deviceUUID)
 	return true
 }
-func (nq *NetworkPriorityPollQueue) UpdatePollingPointByPointUUID(pointUUID string, newPriority model.PollPriority) bool {
+func (nq *NetworkPriorityPollQueue) UpdatePollingPointByPointUUID(pointUUID string, newPriority datatype.PollPriority) bool {
 	nq.PriorityQueue.UpdatePollingPointByPointUUID(pointUUID, newPriority)
 	nq.StandbyPollingPoints.UpdatePollingPointByPointUUID(pointUUID, newPriority)
 	return true
@@ -215,25 +215,25 @@ func (q *PriorityPollQueue) Less(i, j int) bool {
 	iPriority := q.PriorityQueue[i].PollPriority
 	iPriorityNum := 0
 	switch iPriority {
-	case model.PRIORITY_ASAP:
+	case datatype.PriorityASAP:
 		iPriorityNum = 0
-	case model.PRIORITY_HIGH:
+	case datatype.PriorityHigh:
 		iPriorityNum = 1
-	case model.PRIORITY_NORMAL:
+	case datatype.PriorityNormal:
 		iPriorityNum = 2
-	case model.PRIORITY_LOW:
+	case datatype.PriorityLow:
 		iPriorityNum = 3
 	}
 	jPriority := q.PriorityQueue[j].PollPriority
 	jPriorityNum := 0
 	switch jPriority {
-	case model.PRIORITY_ASAP:
+	case datatype.PriorityASAP:
 		jPriorityNum = 0
-	case model.PRIORITY_HIGH:
+	case datatype.PriorityHigh:
 		jPriorityNum = 1
-	case model.PRIORITY_NORMAL:
+	case datatype.PriorityNormal:
 		jPriorityNum = 2
-	case model.PRIORITY_LOW:
+	case datatype.PriorityLow:
 		jPriorityNum = 3
 	}
 
@@ -335,7 +335,7 @@ func (q *PriorityPollQueue) AddPollingPoint(pp *PollingPoint) bool {
 	}
 	return false
 }
-func (q *PriorityPollQueue) UpdatePollingPointByPointUUID(pointUUID string, newPriority model.PollPriority) bool {
+func (q *PriorityPollQueue) UpdatePollingPointByPointUUID(pointUUID string, newPriority datatype.PollPriority) bool {
 	index := q.GetPollingPointIndexByPointUUID(pointUUID)
 	if index >= 0 {
 		q.PriorityQueue[index].PollPriority = newPriority
@@ -361,7 +361,7 @@ func (q *PriorityPollQueue) GetNextPollingPoint() (*PollingPoint, error) {
 }
 
 type PollingPoint struct {
-	PollPriority     model.PollPriority
+	PollPriority     datatype.PollPriority
 	FFPointUUID      string
 	FFDeviceUUID     string
 	FFNetworkUUID    string
@@ -372,12 +372,12 @@ type PollingPoint struct {
 }
 
 func NewPollingPoint(ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID string) *PollingPoint {
-	pp := &PollingPoint{model.PRIORITY_NORMAL, ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID, nil, 0, nil}
+	pp := &PollingPoint{datatype.PriorityNormal, ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID, nil, 0, nil}
 	// WHATEVER FUNCTION CALLS NewPollingPoint NEEDS TO SET THE PRIORITY
 	return pp
 }
 
-func NewPollingPointWithPriority(ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID string, priority model.PollPriority) *PollingPoint {
+func NewPollingPointWithPriority(ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID string, priority datatype.PollPriority) *PollingPoint {
 	pp := &PollingPoint{priority, ffPointUUID, ffDeviceUUID, ffNetworkUUID, ffPluginUUID, nil, 0, nil}
 	return pp
 }
