@@ -28,6 +28,7 @@ type Module struct {
 }
 
 func (m *Module) Init(dbHelper nmodule.DBHelper, moduleName string) error {
+	InitRouter()
 	grpcMarshaller := nmodule.GRPCMarshaller{DbHelper: dbHelper}
 	m.dbHelper = dbHelper
 	m.moduleName = moduleName

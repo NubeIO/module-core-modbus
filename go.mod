@@ -5,7 +5,7 @@ go 1.18
 // replace github.com/NubeIO/rubix-os => /Users/i8e4/Works/NubeIO/rubix-os
 
 require (
-	github.com/NubeIO/lib-module-go v0.0.4
+	github.com/NubeIO/lib-module-go v0.0.5
 	github.com/NubeIO/lib-schema-go v0.0.1
 	github.com/NubeIO/lib-utils-go v0.0.1
 	github.com/NubeIO/nubeio-rubix-lib-helpers-go v0.2.7
