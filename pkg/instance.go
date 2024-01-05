@@ -1,9 +1,7 @@
 package pkg
 
-import argspkg "github.com/NubeIO/rubix-os/args"
-
 func (m *Module) setUUID() {
-	q, err := m.grpcMarshaller.GetPluginByPath(path, argspkg.Args{})
+	q, err := m.grpcMarshaller.GetPluginByName(path)
 	if err != nil {
 		return
 	}

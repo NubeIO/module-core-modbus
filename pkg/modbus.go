@@ -5,7 +5,8 @@ import (
 	"github.com/NubeIO/module-core-modbus/smod"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/grid-x/modbus"
 	"time"
 )
@@ -22,7 +23,7 @@ type Client struct {
 }
 
 func (m *Module) setClient(network *model.Network, device *model.Device, cacheClient bool) (mbClient smod.ModbusClient, err error) {
-	if network.TransportType == model.TransType.Serial || network.TransportType == model.TransType.LoRa {
+	if network.TransportType == dto.TransType.Serial || network.TransportType == dto.TransType.LoRa {
 		serialPort := "/dev/ttyUSB0"
 		baudRate := 38400
 		stopBits := 1
@@ -89,11 +90,11 @@ func (m *Module) setClient(network *model.Network, device *model.Device, cacheCl
 }
 
 func setParity(in string) string {
-	if in == model.SerialParity.None {
+	if in == dto.SerialParity.None {
 		return "N"
-	} else if in == model.SerialParity.Odd {
+	} else if in == dto.SerialParity.Odd {
 		return "O"
-	} else if in == model.SerialParity.Even {
+	} else if in == dto.SerialParity.Even {
 		return "E"
 	} else {
 		return "N"

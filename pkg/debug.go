@@ -2,13 +2,13 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/NubeIO/module-core-modbus/utils"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
+	"github.com/NubeIO/lib-utils-go/nstring"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	log "github.com/sirupsen/logrus"
 )
 
 func (m *Module) modbusDebugMsg(args ...interface{}) {
-	if utils.InEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
+	if nstring.IsEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
 		prefix := "Modbus: "
 		log.Info(prefix, args)
 	}
@@ -16,8 +16,8 @@ func (m *Module) modbusDebugMsg(args ...interface{}) {
 
 // modbusPollingMsg prints only debug messages relevant to polling (more limited than DEBUG)
 func (m *Module) modbusPollingMsg(args ...interface{}) {
-	if utils.InEqualIgnoreCase(m.config.LogLevel, "POLLING") ||
-		utils.InEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
+	if nstring.IsEqualIgnoreCase(m.config.LogLevel, "POLLING") ||
+		nstring.IsEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
 		prefix := "Modbus Polling: "
 		log.Info(prefix, args)
 	}
@@ -29,7 +29,7 @@ func (m *Module) modbusErrorMsg(args ...interface{}) {
 }
 
 func (m *Module) printPointDebugInfo(pnt *model.Point) {
-	if utils.InEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
+	if nstring.IsEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
 		printString := "\n\n"
 		if pnt != nil {
 			printString += fmt.Sprint("Point: ", pnt.UUID, " ", pnt.Name, "\n")

@@ -3,9 +3,9 @@ package pkg
 import (
 	"container/heap"
 	"fmt"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	"github.com/NubeIO/rubix-os/module/shared"
-	"github.com/NubeIO/rubix-os/module/shared/pollqueue"
+	"github.com/NubeIO/lib-module-go/nmodule"
+	"github.com/NubeIO/module-core-modbus/pollqueue"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/patrickmn/go-cache"
 	"time"
 )
@@ -13,10 +13,10 @@ import (
 type Module struct {
 	basePath            string
 	config              *Config
-	dbHelper            shared.DBHelper
+	dbHelper            nmodule.DBHelper
 	enabled             bool
 	fault               bool
-	grpcMarshaller      shared.Marshaller
+	grpcMarshaller      nmodule.Marshaller
 	moduleName          string
 	networks            []*model.Network
 	NetworkPollManagers []*pollqueue.NetworkPollManager
@@ -27,16 +27,17 @@ type Module struct {
 	store               *cache.Cache
 }
 
-func (m *Module) Init(dbHelper shared.DBHelper, moduleName string) error {
-	grpcMarshaller := shared.GRPCMarshaller{DbHelper: dbHelper}
+func (m *Module) Init(dbHelper nmodule.DBHelper, moduleName string) error {
+	InitRouter()
+	grpcMarshaller := nmodule.GRPCMarshaller{DbHelper: dbHelper}
 	m.dbHelper = dbHelper
 	m.moduleName = moduleName
 	m.grpcMarshaller = &grpcMarshaller
 	return nil
 }
 
-func (m *Module) GetInfo() (*shared.Info, error) {
-	return &shared.Info{
+func (m *Module) GetInfo() (*nmodule.Info, error) {
+	return &nmodule.Info{
 		Name:       m.moduleName,
 		Author:     "Nube iO",
 		Website:    "https://nube-io.com",
@@ -47,7 +48,7 @@ func (m *Module) GetInfo() (*shared.Info, error) {
 
 func NewPollManager(
 	conf *pollqueue.Config,
-	marshaller shared.Marshaller,
+	marshaller nmodule.Marshaller,
 	ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string,
 	maxPollRate float64,
 ) *pollqueue.NetworkPollManager {

@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/NubeIO/lib-utils-go/float"
+	"github.com/NubeIO/lib-utils-go/integer"
+	"github.com/NubeIO/lib-utils-go/nstring"
 	"github.com/NubeIO/module-core-modbus/smod"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/pkg/v1/model"
-	"github.com/NubeIO/rubix-os/utils/float"
-	"github.com/NubeIO/rubix-os/utils/integer"
-	"github.com/NubeIO/rubix-os/utils/nstring"
-	"github.com/NubeIO/rubix-os/utils/writemode"
+	"github.com/NubeIO/module-core-modbus/utils/writemode"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	log "github.com/sirupsen/logrus"
 	"math"
 )
@@ -69,13 +70,13 @@ func (m *Module) networkRequest(mbClient smod.ModbusClient, pnt *model.Point, do
 	objectType = convertOldObjectType(objectType)
 
 	switch objectEncoding {
-	case string(model.ByteOrderLebBew):
+	case string(datatype.ByteOrderLebBew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.HighWordFirst)
-	case string(model.ByteOrderLebLew):
+	case string(datatype.ByteOrderLebLew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebLew):
+	case string(datatype.ByteOrderBebLew):
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebBew):
+	case string(datatype.ByteOrderBebBew):
 		mbClient.SetEncoding(smod.BigEndian, smod.HighWordFirst)
 	default:
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
@@ -96,7 +97,7 @@ func (m *Module) networkRequest(mbClient smod.ModbusClient, pnt *model.Point, do
 
 	switch objectType {
 	// COILS
-	case string(model.ObjTypeCoil):
+	case string(datatype.ObjTypeCoil):
 		if doWrite {
 			return mbClient.WriteCoil(address, writeCoilPayload(writeValue))
 		} else {
@@ -104,48 +105,48 @@ func (m *Module) networkRequest(mbClient smod.ModbusClient, pnt *model.Point, do
 		}
 
 	// READ DISCRETE INPUTS
-	case string(model.ObjTypeDiscreteInput):
+	case string(datatype.ObjTypeDiscreteInput):
 		return mbClient.ReadDiscreteInputs(address, uint16(length))
 
 	// READ HOLDINGS
-	case string(model.ObjTypeHoldingRegister):
+	case string(datatype.ObjTypeHoldingRegister):
 		if doWrite {
-			if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+			if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
 				return mbClient.WriteSingleRegister(address, uint16(writeValue))
-			} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+			} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) {
 				return mbClient.WriteDoubleRegister(address, uint32(writeValue))
-			} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+			} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
 				return mbClient.WriteQuadRegister(address, uint64(writeValue))
-			} else if dataType == string(model.TypeFloat32) {
+			} else if dataType == string(datatype.TypeFloat32) {
 				return mbClient.WriteFloat32(address, writeValue)
-			} else if dataType == string(model.TypeFloat64) {
+			} else if dataType == string(datatype.TypeFloat64) {
 				return mbClient.WriteFloat32(address, writeValue)
 			}
 		} else {
-			if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+			if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
 				return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-			} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+			} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) {
 				return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-			} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+			} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
 				return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-			} else if dataType == string(model.TypeFloat32) {
+			} else if dataType == string(datatype.TypeFloat32) {
 				return mbClient.ReadFloat32(address, smod.HoldingRegister)
-			} else if dataType == string(model.TypeFloat64) {
+			} else if dataType == string(datatype.TypeFloat64) {
 				return mbClient.ReadFloat32(address, smod.HoldingRegister)
 			}
 		}
 
 	// READ INPUT REGISTERS
-	case string(model.ObjTypeInputRegister):
-		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+	case string(datatype.ObjTypeInputRegister):
+		if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) {
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+		} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeFloat32) {
+		} else if dataType == string(datatype.TypeFloat32) {
 			return mbClient.ReadFloat32(address, smod.InputRegister)
-		} else if dataType == string(model.TypeFloat64) {
+		} else if dataType == string(datatype.TypeFloat64) {
 			return mbClient.ReadFloat32(address, smod.InputRegister)
 		}
 
@@ -162,25 +163,21 @@ func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (res
 	objectEncoding := pnt.ObjectEncoding                      // beb_lew
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
 	address := pointAddress(pnt, mbClient.DeviceZeroMode)     // register address
-	length := integer.NonNil(pnt.AddressLength)               // modbus register length
 
 	objectType := nstring.NewString(pnt.ObjectType).ToSnakeCase() // eg: readCoil, read_coil, writeCoil
 	objectType = convertOldObjectType(objectType)
 
 	switch objectEncoding {
-	case string(model.ByteOrderLebBew):
+	case string(datatype.ByteOrderLebBew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.HighWordFirst)
-	case string(model.ByteOrderLebLew):
+	case string(datatype.ByteOrderLebLew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebLew):
+	case string(datatype.ByteOrderBebLew):
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebBew):
+	case string(datatype.ByteOrderBebBew):
 		mbClient.SetEncoding(smod.BigEndian, smod.HighWordFirst)
 	default:
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	}
-	if length <= 0 { // Make sure length is > 0
-		length = 1
 	}
 
 	writeValue := *pnt.WriteValue
@@ -189,20 +186,20 @@ func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (res
 
 	switch objectType {
 	// WRITE COILS
-	case string(model.ObjTypeCoil):
+	case string(datatype.ObjTypeCoil):
 		return mbClient.WriteCoil(address, writeCoilPayload(writeValue))
 
 	// WRITE HOLDINGS
-	case string(model.ObjTypeHoldingRegister):
-		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+	case string(datatype.ObjTypeHoldingRegister):
+		if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
 			return mbClient.WriteSingleRegister(address, uint16(writeValue))
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) {
 			return mbClient.WriteDoubleRegister(address, uint32(writeValue))
-		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+		} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
 			return mbClient.WriteQuadRegister(address, uint64(writeValue))
-		} else if dataType == string(model.TypeFloat32) {
+		} else if dataType == string(datatype.TypeFloat32) {
 			return mbClient.WriteFloat32(address, writeValue)
-		} else if dataType == string(model.TypeFloat64) {
+		} else if dataType == string(datatype.TypeFloat64) {
 			return mbClient.WriteFloat32(address, writeValue)
 		}
 	}
@@ -216,63 +213,67 @@ func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (resp
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
 	address := pointAddress(pnt, mbClient.DeviceZeroMode)     // register address
 	length := integer.NonNil(pnt.AddressLength)               // modbus register length
+	length = 1
 
 	objectType := nstring.NewString(pnt.ObjectType).ToSnakeCase() // eg: readCoil, read_coil, writeCoil
 	objectType = convertOldObjectType(objectType)
 
 	switch objectEncoding {
-	case string(model.ByteOrderLebBew):
+	case string(datatype.ByteOrderLebBew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.HighWordFirst)
-	case string(model.ByteOrderLebLew):
+	case string(datatype.ByteOrderLebLew):
 		mbClient.SetEncoding(smod.LittleEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebLew):
+	case string(datatype.ByteOrderBebLew):
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	case string(model.ByteOrderBebBew):
+	case string(datatype.ByteOrderBebBew):
 		mbClient.SetEncoding(smod.BigEndian, smod.HighWordFirst)
 	default:
 		mbClient.SetEncoding(smod.BigEndian, smod.LowWordFirst)
-	}
-	if length <= 0 { // make sure length is > 0
-		length = 1
 	}
 
 	m.modbusDebugMsg(fmt.Sprintf("modbus-read: ObjectType: %s  Addr: %d", objectType, address))
 
 	switch objectType {
 	// COILS
-	case string(model.ObjTypeCoil):
+	case string(datatype.ObjTypeCoil):
 		return mbClient.ReadCoils(address, uint16(length))
 
 	// READ DISCRETE INPUTS
-	case string(model.ObjTypeDiscreteInput):
+	case string(datatype.ObjTypeDiscreteInput):
 		return mbClient.ReadDiscreteInputs(address, uint16(length))
 
 	// READ INPUT REGISTERS
-	case string(model.ObjTypeInputRegister):
-		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+	case string(datatype.ObjTypeInputRegister):
+		if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
+			length = 1
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) || dataType == string(datatype.TypeMod10U32) {
+			length = 2
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+		} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
+			length = 4
 			return mbClient.ReadInputRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeFloat32) {
+		} else if dataType == string(datatype.TypeFloat32) {
 			return mbClient.ReadFloat32(address, smod.InputRegister)
-		} else if dataType == string(model.TypeFloat64) {
-			return mbClient.ReadFloat32(address, smod.InputRegister)
+		} else if dataType == string(datatype.TypeFloat64) {
+			return mbClient.ReadFloat64(address, smod.InputRegister)
 		}
 
 	// READ HOLDINGS
-	case string(model.ObjTypeHoldingRegister):
-		if dataType == string(model.TypeUint16) || dataType == string(model.TypeInt16) {
+	case string(datatype.ObjTypeHoldingRegister):
+		if dataType == string(datatype.TypeUint16) || dataType == string(datatype.TypeInt16) {
+			length = 1
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint32) || dataType == string(model.TypeInt32) {
+		} else if dataType == string(datatype.TypeUint32) || dataType == string(datatype.TypeInt32) || dataType == string(datatype.TypeMod10U32) {
+			length = 2
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeUint64) || dataType == string(model.TypeInt64) {
+		} else if dataType == string(datatype.TypeUint64) || dataType == string(datatype.TypeInt64) {
+			length = 4
 			return mbClient.ReadHoldingRegisters(address, uint16(length), dataType)
-		} else if dataType == string(model.TypeFloat32) {
+		} else if dataType == string(datatype.TypeFloat32) {
 			return mbClient.ReadFloat32(address, smod.HoldingRegister)
-		} else if dataType == string(model.TypeFloat64) {
-			return mbClient.ReadFloat32(address, smod.HoldingRegister)
+		} else if dataType == string(datatype.TypeFloat64) {
+			return mbClient.ReadFloat64(address, smod.HoldingRegister)
 		}
 
 	}
@@ -282,17 +283,17 @@ func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (resp
 
 func SetPriorityArrayModeBasedOnWriteMode(pnt *model.Point) bool {
 	switch pnt.WriteMode {
-	case model.ReadOnce, model.ReadOnly:
-		pnt.PointPriorityArrayMode = model.ReadOnlyNoPriorityArrayRequired
+	case datatype.ReadOnce, datatype.ReadOnly:
+		pnt.PointPriorityArrayMode = datatype.ReadOnlyNoPriorityArrayRequired
 		return true
-	case model.WriteOnce, model.WriteOnceReadOnce, model.WriteAlways, model.WriteOnceThenRead, model.WriteAndMaintain:
-		pnt.PointPriorityArrayMode = model.PriorityArrayToWriteValue
+	case datatype.WriteOnce, datatype.WriteOnceReadOnce, datatype.WriteAlways, datatype.WriteOnceThenRead, datatype.WriteAndMaintain:
+		pnt.PointPriorityArrayMode = datatype.PriorityArrayToWriteValue
 		return true
 	}
 	return false
 }
 
-func isWriteable(writeMode model.WriteMode, objectType string) bool {
+func isWriteable(writeMode datatype.WriteMode, objectType string) bool {
 	if isWriteableObjectType(objectType) && writemode.IsWriteable(writeMode) {
 		return true
 	} else {
@@ -302,13 +303,13 @@ func isWriteable(writeMode model.WriteMode, objectType string) bool {
 
 func isWriteableObjectType(objectType string) bool {
 	switch objectType {
-	case string(model.ObjTypeWriteCoil), string(model.ObjTypeWriteCoils), string(model.ObjTypeCoil):
+	case string(datatype.ObjTypeWriteCoil), string(datatype.ObjTypeWriteCoils), string(datatype.ObjTypeCoil):
 		return true
-	case string(model.ObjTypeWriteHolding), string(model.ObjTypeWriteHoldings), string(model.ObjTypeHoldingRegister):
+	case string(datatype.ObjTypeWriteHolding), string(datatype.ObjTypeWriteHoldings), string(datatype.ObjTypeHoldingRegister):
 		return true
-	case string(model.ObjTypeWriteInt16), string(model.ObjTypeWriteUint16):
+	case string(datatype.ObjTypeWriteInt16), string(datatype.ObjTypeWriteUint16):
 		return true
-	case string(model.ObjTypeWriteFloat32):
+	case string(datatype.ObjTypeWriteFloat32):
 		return true
 	}
 	return false
@@ -316,17 +317,17 @@ func isWriteableObjectType(objectType string) bool {
 
 func checkForBooleanType(ObjectType, DataType string) (isTypeBool bool) {
 	isTypeBool = false
-	if DataType == string(model.TypeDigital) {
+	if DataType == string(datatype.TypeDigital) {
 		isTypeBool = true
 	}
 	switch ObjectType {
 	case
-		string(model.ObjTypeReadCoil),
-		string(model.ObjTypeReadCoils),
-		string(model.ObjTypeReadDiscreteInput),
-		string(model.ObjTypeReadDiscreteInputs),
-		string(model.ObjTypeWriteCoil),
-		string(model.ObjTypeWriteCoils):
+		string(datatype.ObjTypeReadCoil),
+		string(datatype.ObjTypeReadCoils),
+		string(datatype.ObjTypeReadDiscreteInput),
+		string(datatype.ObjTypeReadDiscreteInputs),
+		string(datatype.ObjTypeWriteCoil),
+		string(datatype.ObjTypeWriteCoils):
 		isTypeBool = true
 	}
 	return
@@ -336,14 +337,14 @@ func checkForOutputType(ObjectType string) (isOutput bool) {
 	isOutput = false
 	switch ObjectType {
 	case
-		string(model.ObjTypeWriteCoil),
-		string(model.ObjTypeWriteCoils),
-		string(model.ObjTypeWriteHolding),
-		string(model.ObjTypeWriteHoldings),
-		string(model.ObjTypeWriteInt16),
-		string(model.ObjTypeWriteUint16),
-		string(model.ObjTypeWriteFloat32),
-		string(model.ObjTypeWriteFloat64):
+		string(datatype.ObjTypeWriteCoil),
+		string(datatype.ObjTypeWriteCoils),
+		string(datatype.ObjTypeWriteHolding),
+		string(datatype.ObjTypeWriteHoldings),
+		string(datatype.ObjTypeWriteInt16),
+		string(datatype.ObjTypeWriteUint16),
+		string(datatype.ObjTypeWriteFloat32),
+		string(datatype.ObjTypeWriteFloat64):
 		isOutput = true
 	}
 	return
@@ -409,23 +410,23 @@ func hasBit(n int, pos uint) bool {
 func convertOldObjectType(objectType string) string {
 	switch objectType {
 	// COILS
-	case string(model.ObjTypeReadCoil), string(model.ObjTypeReadCoils), string(model.ObjTypeWriteCoil), string(model.ObjTypeWriteCoils), string(model.ObjTypeCoil):
-		return string(model.ObjTypeCoil)
+	case string(datatype.ObjTypeReadCoil), string(datatype.ObjTypeReadCoils), string(datatype.ObjTypeWriteCoil), string(datatype.ObjTypeWriteCoils), string(datatype.ObjTypeCoil):
+		return string(datatype.ObjTypeCoil)
 
 	// READ DISCRETE INPUTS
-	case string(model.ObjTypeReadDiscreteInput), string(model.ObjTypeReadDiscreteInputs), string(model.ObjTypeDiscreteInput):
-		return string(model.ObjTypeDiscreteInput)
+	case string(datatype.ObjTypeReadDiscreteInput), string(datatype.ObjTypeReadDiscreteInputs), string(datatype.ObjTypeDiscreteInput):
+		return string(datatype.ObjTypeDiscreteInput)
 
 	// READ INPUT REGISTERS
-	case string(model.ObjTypeReadRegister), string(model.ObjTypeReadRegisters), string(model.ObjTypeInputRegister):
-		return string(model.ObjTypeInputRegister)
+	case string(datatype.ObjTypeReadRegister), string(datatype.ObjTypeReadRegisters), string(datatype.ObjTypeInputRegister):
+		return string(datatype.ObjTypeInputRegister)
 
 	// READ HOLDINGS
-	case string(model.ObjTypeReadHolding), string(model.ObjTypeReadHoldings), string(model.ObjTypeWriteHolding), string(model.ObjTypeWriteHoldings), string(model.ObjTypeHoldingRegister):
-		return string(model.ObjTypeHoldingRegister)
+	case string(datatype.ObjTypeReadHolding), string(datatype.ObjTypeReadHoldings), string(datatype.ObjTypeWriteHolding), string(datatype.ObjTypeWriteHoldings), string(datatype.ObjTypeHoldingRegister):
+		return string(datatype.ObjTypeHoldingRegister)
 
 	default:
 		fmt.Println("invalid ObjectType: ", objectType)
-		return string(model.ObjTypeHoldingRegister)
+		return string(datatype.ObjTypeHoldingRegister)
 	}
 }
