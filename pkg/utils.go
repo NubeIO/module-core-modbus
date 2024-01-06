@@ -13,6 +13,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	log "github.com/sirupsen/logrus"
 	"math"
+	"time"
 )
 
 type Operation struct {
@@ -59,7 +60,7 @@ func pointAddress(pnt *model.Point, zeroMode bool) uint16 {
 	}
 }
 
-func (m *Module) networkRequest(mbClient smod.ModbusClient, pnt *model.Point, doWrite bool) (response interface{}, responseValue float64, err error) {
+func (m *Module) networkRequest(mbClient *smod.ModbusClient, pnt *model.Point, doWrite bool) (response interface{}, responseValue float64, err error) {
 	mbClient.Debug = true
 	objectEncoding := pnt.ObjectEncoding                      // beb_lew
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
@@ -155,7 +156,7 @@ func (m *Module) networkRequest(mbClient smod.ModbusClient, pnt *model.Point, do
 	return nil, 0, nil
 }
 
-func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (response interface{}, responseValue float64, err error) {
+func (m *Module) networkWrite(mbClient *smod.ModbusClient, pnt *model.Point) (response interface{}, responseValue float64, err error) {
 	if pnt.WriteValue == nil {
 		return nil, 0, errors.New("modbus-write: point has no WriteValue")
 	}
@@ -207,7 +208,7 @@ func (m *Module) networkWrite(mbClient smod.ModbusClient, pnt *model.Point) (res
 	return nil, 0, errors.New("modbus-write: dataType is not recognized")
 }
 
-func (m *Module) networkRead(mbClient smod.ModbusClient, pnt *model.Point) (response interface{}, responseValue float64, err error) {
+func (m *Module) networkRead(mbClient *smod.ModbusClient, pnt *model.Point) (response interface{}, responseValue float64, err error) {
 	mbClient.Debug = true
 	objectEncoding := pnt.ObjectEncoding                      // beb_lew
 	dataType := nstring.NewString(pnt.DataType).ToSnakeCase() // eg: int16, uint16
@@ -429,4 +430,9 @@ func convertOldObjectType(objectType string) string {
 		fmt.Println("invalid ObjectType: ", objectType)
 		return string(datatype.ObjTypeHoldingRegister)
 	}
+}
+
+func TimeStamp() (hostTime string) {
+	hostTime = time.Now().Format(time.Stamp)
+	return
 }

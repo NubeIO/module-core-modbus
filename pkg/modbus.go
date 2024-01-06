@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/module-core-modbus/smod"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
@@ -22,7 +23,25 @@ type Client struct {
 	Timeout    time.Duration `json:"device_timeout_in_ms"`
 }
 
-func (m *Module) setClient(network *model.Network, device *model.Device, cacheClient bool) (mbClient smod.ModbusClient, err error) {
+func (m *Module) createMbClient(netPollMan *pollqueue.NetworkPollManager, net *model.Network, dev *model.Device) (*smod.ModbusClient, error) {
+	mbClient, err := m.setClient(net, dev, true)
+	if err != nil {
+		if mbClient.PortUnavailable {
+			netPollMan.PortUnavailable()
+			unpauseFunc := func() {
+				netPollMan.PortAvailable()
+			}
+			netPollMan.PortUnavailableTimeout = time.AfterFunc(10*time.Second, unpauseFunc)
+		}
+		m.updateNetworkMessage(net, "", err, m.pollCounter)
+		return nil, err
+	}
+	m.mbClients[net.UUID] = mbClient
+	return mbClient, nil
+}
+
+func (m *Module) setClient(network *model.Network, device *model.Device, cacheClient bool) (mbClient *smod.ModbusClient, err error) {
+	mbClient = &smod.ModbusClient{}
 	if network.TransportType == dto.TransType.Serial || network.TransportType == dto.TransType.LoRa {
 		serialPort := "/dev/ttyUSB0"
 		baudRate := 38400
@@ -62,7 +81,7 @@ func (m *Module) setClient(network *model.Network, device *model.Device, cacheCl
 		defer handler.Close()
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("setClient:  %v. port:%s", err, serialPort))
-			return smod.ModbusClient{PortUnavailable: true}, err
+			return nil, err
 		}
 		mc := modbus.NewClient(handler)
 		mbClient.RTUClientHandler = handler
@@ -73,14 +92,14 @@ func (m *Module) setClient(network *model.Network, device *model.Device, cacheCl
 		url, err := uurl.JoinIpPort(device.Host, device.Port)
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("modbus: failed to validate device IP %s\n", url))
-			return smod.ModbusClient{}, err
+			return nil, err
 		}
 		handler := modbus.NewTCPClientHandler(url)
 		err = handler.Connect()
 		defer handler.Close()
 		if err != nil {
 			m.modbusErrorMsg(fmt.Sprintf("setClient:  %v. port:%s", err, url))
-			return smod.ModbusClient{PortUnavailable: true}, err
+			return nil, err
 		}
 		mc := modbus.NewClient(handler)
 		mbClient.TCPClientHandler = handler

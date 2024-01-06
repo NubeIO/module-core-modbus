@@ -31,17 +31,6 @@ type Body struct {
 	DeviceAddress uint8 `json:"device_address"`
 }
 
-type wizard struct {
-	IP            string `json:"ip"`
-	Port          int    `json:"port"`
-	SerialPort    string `json:"serial_port"`
-	BaudRate      uint   `json:"baud_rate"`
-	DeviceAddr    uint   `json:"device_addr"`
-	WizardVersion uint   `json:"wizard_version"`
-	NameArg       string `json:"name_arg"`
-	AddArg        uint   `json:"add_arg"`
-}
-
 var route *router.Router
 
 func (m *Module) CallModule(

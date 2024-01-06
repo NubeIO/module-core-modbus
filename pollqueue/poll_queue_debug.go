@@ -29,30 +29,29 @@ func (pm *NetworkPollManager) pollQueueErrorMsg(args ...interface{}) {
 func (pm *NetworkPollManager) PrintPollQueuePointUUIDs() {
 	if nstring.IsEqualIgnoreCase(pm.Config.LogLevel, "DEBUG") { // Added here to disable debug processes when not using logging
 		printString := "\n\n"
-		printString += fmt.Sprint("PrintPollQueuePointUUIDs: (NOTE: THE CURRENT PollPoint HAS ALREADY BEEN REMOVED FROM THE QUEUES AT THIS POINT!!\nTOTAL COUNT = ", pm.PollQueue.PriorityQueue.Len()+pm.PollQueue.StandbyPollingPoints.Len()+pm.PollQueue.OutstandingPollingPoints.Len(), "\n")
 		printString += fmt.Sprint("NextPollPoint: ")
-		if pm.PluginQueueUnloader != nil {
-			printString += fmt.Sprintf("%+v\n", pm.PluginQueueUnloader.NextPollPoint)
-		}
 		printString += fmt.Sprint("PollQueue: COUNT = ", pm.PollQueue.PriorityQueue.Len(), ": ")
-		for _, pp := range pm.PollQueue.PriorityQueue.PriorityQueue {
+		for _, pp := range pm.PollQueue.PriorityQueue.priorityQueue {
 			printString += fmt.Sprint(pp.FFPointUUID, " - ", pp.PollPriority, "; ")
+			if pp != nil {
+				printString += fmt.Sprint(pp.FFPointUUID, " - ", pp.PollPriority, "; ")
+			} else {
+				pm.pollQueueErrorMsg("PrintPollQueuePointUUIDs() for _, pp := range pm.PollQueue.PriorityQueue.PriorityQueue: pp is nil")
+			}
 		}
 		printString += fmt.Sprint("", "\n")
 		printString += fmt.Sprint("StandbyPollingPoints COUNT = ", pm.PollQueue.StandbyPollingPoints.Len(), ": ")
-		for _, pp := range pm.PollQueue.StandbyPollingPoints.PriorityQueue {
-			printString += fmt.Sprint(pp.FFPointUUID, " - ", pp.PollPriority, ", repoll:", pp.RepollTimer != nil, "; ")
-		}
-		printString += fmt.Sprint("\n")
-		printString += fmt.Sprint("CurrentlyPollingPoints COUNT = ", pm.PollQueue.OutstandingPollingPoints.Len(), ": ")
-		for _, pp := range pm.PollQueue.OutstandingPollingPoints.PriorityQueue {
-			printString += fmt.Sprint(pp.FFPointUUID, " - ", pp.PollPriority, ", repoll:", pp.RepollTimer != nil, "; ")
+		for _, pp := range pm.PollQueue.StandbyPollingPoints.queue {
+			if pp != nil {
+				printString += fmt.Sprint(pp.FFPointUUID, " - ", pp.PollPriority, ", repoll:", pp.RepollTimer != nil, "; ")
+			} else {
+				pm.pollQueueErrorMsg("PrintPollQueuePointUUIDs() for _, pp := range pm.PollQueue.StandbyPollingPoints.PriorityQueue: pp is nil")
+			}
 		}
 		printString += fmt.Sprint("\n")
 		pm.pollQueueDebugMsg(printString)
 	}
 }
-
 func (pm *NetworkPollManager) PrintPointDebugInfo(pnt *model.Point) {
 	if nstring.IsEqualIgnoreCase(pm.Config.LogLevel, "DEBUG") { // Added here to disable debug processes when not using logging
 		printString := "\n\n"
@@ -141,55 +140,51 @@ func (pm *NetworkPollManager) PrintPointDebugInfo(pnt *model.Point) {
 		pm.pollQueueDebugMsg("ERROR: INVALID POINT")
 	}
 }
-
 func (pm *NetworkPollManager) PrintPollingPointDebugInfo(pp *PollingPoint) {
 	if pp != nil {
 		pm.pollQueueDebugMsg(fmt.Sprintf("PollingPoint pp %+v", pp))
 	}
 }
-
 func (pm *NetworkPollManager) PrintPollQueueStatistics() {
 	if nstring.IsEqualIgnoreCase(pm.Config.LogLevel, "DEBUG") { // Added here to disable debug processes when not using logging
-
 		pm.PrintPollQueuePointUUIDs()
 
 		printString := "\n\n"
 		printString += fmt.Sprint("PrintPollQueueStatistics: \n")
-		printString += fmt.Sprint("MaxPollExecuteTimeSecs: ", pm.MaxPollExecuteTimeSecs, "\n")
-		printString += fmt.Sprint("AveragePollExecuteTimeSecs: ", pm.AveragePollExecuteTimeSecs, "\n")
-		printString += fmt.Sprint("MinPollExecuteTimeSecs: ", pm.MinPollExecuteTimeSecs, "\n")
 		printString += fmt.Sprint("TotalPollQueueLength: ", pm.PollQueue.PriorityQueue.Len(), "\n")
 		printString += fmt.Sprint("TotalStandbyPointsLength: ", pm.PollQueue.StandbyPollingPoints.Len(), "\n")
-		printString += fmt.Sprint("TotalPointsOutForPolling: ", pm.PollQueue.OutstandingPollingPoints.Len(), "\n")
-		printString += fmt.Sprint("ASAPPriorityPollQueueLength: ", pm.ASAPPriorityPollQueueLength, "\n")
-		printString += fmt.Sprint("HighPriorityPollQueueLength: ", pm.HighPriorityPollQueueLength, "\n")
-		printString += fmt.Sprint("NormalPriorityPollQueueLength: ", pm.NormalPriorityPollQueueLength, "\n")
-		printString += fmt.Sprint("LowPriorityPollQueueLength: ", pm.LowPriorityPollQueueLength, "\n")
-		printString += fmt.Sprint("ASAPPriorityAveragePollTime: ", pm.ASAPPriorityAveragePollTime, "\n")
-		printString += fmt.Sprint("HighPriorityAveragePollTime: ", pm.HighPriorityAveragePollTime, "\n")
-		printString += fmt.Sprint("NormalPriorityAveragePollTime: ", pm.NormalPriorityAveragePollTime, "\n")
-		printString += fmt.Sprint("LowPriorityAveragePollTime: ", pm.LowPriorityAveragePollTime, "\n")
-		printString += fmt.Sprint("TotalPollCount: ", pm.TotalPollCount, "\n")
-		printString += fmt.Sprint("ASAPPriorityPollCount: ", pm.ASAPPriorityPollCount, "\n")
-		printString += fmt.Sprint("HighPriorityPollCount: ", pm.HighPriorityPollCount, "\n")
-		printString += fmt.Sprint("NormalPriorityPollCount: ", pm.NormalPriorityPollCount, "\n")
-		printString += fmt.Sprint("LowPriorityPollCount: ", pm.LowPriorityPollCount, "\n")
-		printString += fmt.Sprint("ASAPPriorityPollCountForAvg: ", pm.ASAPPriorityPollCountForAvg, "\n")
-		printString += fmt.Sprint("HighPriorityPollCountForAvg: ", pm.HighPriorityPollCountForAvg, "\n")
-		printString += fmt.Sprint("NormalPriorityPollCountForAvg: ", pm.NormalPriorityPollCountForAvg, "\n")
-		printString += fmt.Sprint("LowPriorityPollCountForAvg: ", pm.LowPriorityPollCountForAvg, "\n")
 		printString += fmt.Sprint("ASAPPriorityMaxCycleTime: ", pm.ASAPPriorityMaxCycleTime, "\n")
 		printString += fmt.Sprint("HighPriorityMaxCycleTime: ", pm.HighPriorityMaxCycleTime, "\n")
 		printString += fmt.Sprint("NormalPriorityMaxCycleTime: ", pm.NormalPriorityMaxCycleTime, "\n")
 		printString += fmt.Sprint("LowPriorityMaxCycleTime: ", pm.LowPriorityMaxCycleTime, "\n")
-		printString += fmt.Sprint("ASAPPriorityLockupAlert: ", pm.ASAPPriorityLockupAlert, "\n")
-		printString += fmt.Sprint("HighPriorityLockupAlert: ", pm.HighPriorityLockupAlert, "\n")
-		printString += fmt.Sprint("NormalPriorityLockupAlert: ", pm.NormalPriorityLockupAlert, "\n")
-		printString += fmt.Sprint("LowPriorityLockupAlert: ", pm.LowPriorityLockupAlert, "\n")
-		printString += fmt.Sprint("PollingStartTimeUnix: ", pm.PollingStartTimeUnix, "\n")
-		printString += fmt.Sprint("BusyTime: ", pm.BusyTime, "% \n")
-		printString += fmt.Sprint("EnabledTime: ", pm.EnabledTime, " \n")
-		printString += fmt.Sprint("PortUnavailableTime: ", pm.PortUnavailableTime, " \n")
+		printString += fmt.Sprint("MaxPollExecuteTimeSecs: ", pm.Statistics.MaxPollExecuteTimeSecs, "\n")
+		printString += fmt.Sprint("AveragePollExecuteTimeSecs: ", pm.Statistics.AveragePollExecuteTimeSecs, "\n")
+		printString += fmt.Sprint("MinPollExecuteTimeSecs: ", pm.Statistics.MinPollExecuteTimeSecs, "\n")
+		printString += fmt.Sprint("ASAPPriorityPollQueueLength: ", pm.Statistics.ASAPPriorityPollQueueLength, "\n")
+		printString += fmt.Sprint("HighPriorityPollQueueLength: ", pm.Statistics.HighPriorityPollQueueLength, "\n")
+		printString += fmt.Sprint("NormalPriorityPollQueueLength: ", pm.Statistics.NormalPriorityPollQueueLength, "\n")
+		printString += fmt.Sprint("LowPriorityPollQueueLength: ", pm.Statistics.LowPriorityPollQueueLength, "\n")
+		printString += fmt.Sprint("ASAPPriorityAveragePollTime: ", pm.Statistics.ASAPPriorityAveragePollTime, "\n")
+		printString += fmt.Sprint("HighPriorityAveragePollTime: ", pm.Statistics.HighPriorityAveragePollTime, "\n")
+		printString += fmt.Sprint("NormalPriorityAveragePollTime: ", pm.Statistics.NormalPriorityAveragePollTime, "\n")
+		printString += fmt.Sprint("LowPriorityAveragePollTime: ", pm.Statistics.LowPriorityAveragePollTime, "\n")
+		printString += fmt.Sprint("TotalPollCount: ", pm.Statistics.TotalPollCount, "\n")
+		printString += fmt.Sprint("ASAPPriorityPollCount: ", pm.Statistics.ASAPPriorityPollCount, "\n")
+		printString += fmt.Sprint("HighPriorityPollCount: ", pm.Statistics.HighPriorityPollCount, "\n")
+		printString += fmt.Sprint("NormalPriorityPollCount: ", pm.Statistics.NormalPriorityPollCount, "\n")
+		printString += fmt.Sprint("LowPriorityPollCount: ", pm.Statistics.LowPriorityPollCount, "\n")
+		printString += fmt.Sprint("ASAPPriorityPollCountForAvg: ", pm.Statistics.ASAPPriorityPollCountForAvg, "\n")
+		printString += fmt.Sprint("HighPriorityPollCountForAvg: ", pm.Statistics.HighPriorityPollCountForAvg, "\n")
+		printString += fmt.Sprint("NormalPriorityPollCountForAvg: ", pm.Statistics.NormalPriorityPollCountForAvg, "\n")
+		printString += fmt.Sprint("LowPriorityPollCountForAvg: ", pm.Statistics.LowPriorityPollCountForAvg, "\n")
+		printString += fmt.Sprint("ASAPPriorityLockupAlert: ", pm.Statistics.ASAPPriorityLockupAlert, "\n")
+		printString += fmt.Sprint("HighPriorityLockupAlert: ", pm.Statistics.HighPriorityLockupAlert, "\n")
+		printString += fmt.Sprint("NormalPriorityLockupAlert: ", pm.Statistics.NormalPriorityLockupAlert, "\n")
+		printString += fmt.Sprint("LowPriorityLockupAlert: ", pm.Statistics.LowPriorityLockupAlert, "\n")
+		printString += fmt.Sprint("PollingStartTimeUnix: ", pm.Statistics.PollingStartTimeUnix, "\n")
+		printString += fmt.Sprint("BusyTime: ", pm.Statistics.BusyTime, "% \n")
+		printString += fmt.Sprint("EnabledTime: ", pm.Statistics.EnabledTime, " \n")
+		printString += fmt.Sprint("PortUnavailableTime: ", pm.Statistics.PortUnavailableTime, " \n")
 		printString += fmt.Sprint("\n")
 		pm.pollQueueDebugMsg(printString)
 	}
