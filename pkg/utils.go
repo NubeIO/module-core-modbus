@@ -37,7 +37,7 @@ type Operation struct {
 
 func pointWrite(pnt *model.Point) (out float64) {
 	out = float.NonNil(pnt.WriteValue)
-	log.Infof("modbus-write: pointWrite() ObjectType: %s  Addr: %d WriteValue: %v\n", pnt.ObjectType, integer.NonNil(pnt.AddressID), out)
+	log.Infof("modbus-write: pointWrite() ObjectType: %s  Addr: %d WriteValue: %v", pnt.ObjectType, integer.NonNil(pnt.AddressID), out)
 	return
 }
 

@@ -47,7 +47,7 @@ func (mc *ModbusClient) SetEncoding(endianness Endianness, wordOrder WordOrder) 
 func (mc *ModbusClient) ReadCoils(addr uint16, quantity uint16) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.ReadCoils(addr, quantity)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to ReadCoils: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to ReadCoils: %v]", err)
 		return
 	}
 	out = float64(raw[0])
@@ -58,7 +58,7 @@ func (mc *ModbusClient) ReadCoils(addr uint16, quantity uint16) (raw []byte, out
 func (mc *ModbusClient) ReadDiscreteInputs(addr uint16, quantity uint16) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.ReadDiscreteInputs(addr, quantity)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to ReadDiscreteInputs: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to ReadDiscreteInputs: %v]", err)
 		return
 	}
 	out = float64(raw[0])
@@ -69,7 +69,7 @@ func (mc *ModbusClient) ReadDiscreteInputs(addr uint16, quantity uint16) (raw []
 func (mc *ModbusClient) ReadInputRegisters(addr uint16, quantity uint16, dataType string) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.ReadInputRegisters(addr, quantity)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to ReadInputRegisters: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to ReadInputRegisters: %v]", err)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (mc *ModbusClient) ReadFloat32s(addr uint16, quantity uint16, regType RegTy
 func (mc *ModbusClient) ReadFloat32(addr uint16, regType RegType) (raw []float32, out float64, err error) {
 	raw, err = mc.ReadFloat32s(addr, 1, regType)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to ReadFloat32: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to ReadFloat32: %v]", err)
 		return
 	}
 	out = float64(raw[0])
@@ -238,7 +238,7 @@ func (mc *ModbusClient) ReadFloat64s(addr uint16, quantity uint16, regType RegTy
 func (mc *ModbusClient) ReadFloat64(addr uint16, regType RegType) (raw []float64, out float64, err error) {
 	raw, err = mc.ReadFloat64s(addr, 1, regType)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to ReadFloat64: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to ReadFloat64: %v]", err)
 		return
 	}
 	out = raw[0]
@@ -249,7 +249,7 @@ func (mc *ModbusClient) ReadFloat64(addr uint16, regType RegType) (raw []float64
 func (mc *ModbusClient) WriteFloat32(addr uint16, value float64) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.WriteMultipleRegisters(addr, 2, float32ToBytes(mc.Endianness, mc.WordOrder, float32(value)))
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to WriteFloat32: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to WriteFloat32: %v]", err)
 		return
 	}
 	out = value
@@ -264,7 +264,7 @@ func (mc *ModbusClient) WriteSingleRegister(addr uint16, value uint16) (raw []by
 		//  where the value bytes are switched around.
 		//  Most other Modbus tools do not check for this error anyway.
 		if !strings.Contains(err.Error(), "modbus: response value") {
-			log.Errorf("Modbus Polling: [failed to WriteSingleRegister: %v]\n", err)
+			log.Errorf("Modbus Polling: [failed to WriteSingleRegister: %v]", err)
 			return
 		} else {
 			err = nil
@@ -278,7 +278,7 @@ func (mc *ModbusClient) WriteSingleRegister(addr uint16, value uint16) (raw []by
 func (mc *ModbusClient) WriteDoubleRegister(addr uint16, value uint32) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.WriteMultipleRegisters(addr, 2, uint32ToBytes(mc.Endianness, mc.WordOrder, value))
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to WriteDoubleRegister: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to WriteDoubleRegister: %v]", err)
 		return
 	}
 	out = float64(value)
@@ -289,7 +289,7 @@ func (mc *ModbusClient) WriteDoubleRegister(addr uint16, value uint32) (raw []by
 func (mc *ModbusClient) WriteQuadRegister(addr uint16, value uint64) (raw []byte, out float64, err error) {
 	raw, err = mc.Client.WriteMultipleRegisters(addr, 4, uint64ToBytes(mc.Endianness, mc.WordOrder, value))
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to WriteQuadRegister : %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to WriteQuadRegister : %v]", err)
 		return
 	}
 	out = float64(value)
@@ -300,7 +300,7 @@ func (mc *ModbusClient) WriteQuadRegister(addr uint16, value uint64) (raw []byte
 func (mc *ModbusClient) WriteCoil(addr uint16, value uint16) (values []byte, out float64, err error) {
 	values, err = mc.Client.WriteSingleCoil(addr, value)
 	if err != nil {
-		log.Errorf("Modbus Polling: [failed to WriteCoil: %v]\n", err)
+		log.Errorf("Modbus Polling: [failed to WriteCoil: %v]", err)
 		return
 	}
 	if value == 0 {
