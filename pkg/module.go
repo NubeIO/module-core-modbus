@@ -45,7 +45,7 @@ func (m *Module) GetInfo() (*nmodule.Info, error) {
 }
 
 func (m *Module) setUUID() {
-	q, err := m.grpcMarshaller.GetPluginByName(pluginName)
+	q, err := m.grpcMarshaller.GetPluginByName(m.moduleName)
 	if err != nil {
 		return
 	}

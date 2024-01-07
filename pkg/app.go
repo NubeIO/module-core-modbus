@@ -17,8 +17,6 @@ import (
 	"time"
 )
 
-var pluginName = "modbus"
-
 func (m *Module) addNetwork(body *model.Network) (network *model.Network, err error) {
 	m.modbusDebugMsg("addNetwork(): ", body.Name)
 	body.HasPollingStatistics = true
