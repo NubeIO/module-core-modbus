@@ -9,8 +9,7 @@ import (
 
 func (m *Module) modbusDebugMsg(args ...interface{}) {
 	if nstring.IsEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
-		prefix := "Modbus: "
-		log.Info(prefix, args)
+		log.Info(args...)
 	}
 }
 
@@ -18,14 +17,12 @@ func (m *Module) modbusDebugMsg(args ...interface{}) {
 func (m *Module) modbusPollingMsg(args ...interface{}) {
 	if nstring.IsEqualIgnoreCase(m.config.LogLevel, "POLLING") ||
 		nstring.IsEqualIgnoreCase(m.config.LogLevel, "DEBUG") {
-		prefix := "Modbus Polling: "
-		log.Info(prefix, args)
+		log.Info(args...)
 	}
 }
 
 func (m *Module) modbusErrorMsg(args ...interface{}) {
-	prefix := "Modbus: "
-	log.Error(prefix, args)
+	log.Error(args...)
 }
 
 func (m *Module) printPointDebugInfo(pnt *model.Point) {

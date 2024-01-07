@@ -26,13 +26,14 @@ type Client struct {
 func (m *Module) createMbClient(netPollMan *pollqueue.NetworkPollManager, net *model.Network, dev *model.Device) (*smod.ModbusClient, error) {
 	mbClient, err := m.setClient(net, dev, true)
 	if err != nil {
-		if mbClient.PortUnavailable {
-			netPollMan.PortUnavailable()
-			unpauseFunc := func() {
-				netPollMan.PortAvailable()
-			}
-			netPollMan.PortUnavailableTimeout = time.AfterFunc(10*time.Second, unpauseFunc)
-		}
+		// TODO: why this null pointer exception code is here
+		// if mbClient.PortUnavailable {
+		// 	netPollMan.PortUnavailable()
+		// 	unpauseFunc := func() {
+		// 		netPollMan.PortAvailable()
+		// 	}
+		// 	netPollMan.PortUnavailableTimeout = time.AfterFunc(10*time.Second, unpauseFunc)
+		// }
 		m.updateNetworkMessage(net, "", err, m.pollCounter)
 		return nil, err
 	}
