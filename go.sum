@@ -5,8 +5,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/NubeIO/lib-date v0.0.6 h1:88Ki7UIOvDEKyd3vKJ7r4fiUeX25Q5iyMO5d0125wrA=
 github.com/NubeIO/lib-date v0.0.6/go.mod h1:VvpSwdwcVCaOgTN+Ad96nHBkFDWTt3VekG933QCtGtc=
-github.com/NubeIO/lib-module-go v0.0.5 h1:GyuMnPpaGgjCrOlZf/L08WJionIGbvHPJUnIbEUgZi8=
-github.com/NubeIO/lib-module-go v0.0.5/go.mod h1:7xej5FjC9ty1JJvS8kq+fUJCcpsMhmbBk07wBfNVBj0=
+github.com/NubeIO/lib-module-go v0.0.6 h1:HA0OqNOiSv3Nt6M1hOYI5NtOStXeIa+5PNJHgkCuSQs=
+github.com/NubeIO/lib-module-go v0.0.6/go.mod h1:7xej5FjC9ty1JJvS8kq+fUJCcpsMhmbBk07wBfNVBj0=
 github.com/NubeIO/lib-networking v0.1.0 h1:XhhG8lTGjsULgcI8ZuJ/R3xyXIQlVQ3Tspig/7f0ce8=
 github.com/NubeIO/lib-networking v0.1.0/go.mod h1:WVj1zTKJ4qYijtzNvu7N5w8+cXFlCjy+HxjnIvSFgNA=
 github.com/NubeIO/lib-schema-go v0.0.1 h1:K66B8FMC4RfWqFyU0cRCgMDKsO7H6TE933V5l7QdlnU=
