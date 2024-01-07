@@ -46,7 +46,7 @@ func (m *Module) CallModule(
 func InitRouter() {
 	route = router.NewRouter()
 
-	route.Handle(nhttp.GET, "/api/network/schema", GetNetworkSchema)
+	route.Handle(nhttp.GET, "/api/networks/schema", GetNetworkSchema)
 	route.Handle(nhttp.GET, "/api/devices/schema", GetDeviceSchema)
 	route.Handle(nhttp.GET, "/api/points/schema", GetPointSchema)
 
