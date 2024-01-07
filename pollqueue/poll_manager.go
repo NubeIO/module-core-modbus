@@ -1,12 +1,12 @@
 package pollqueue
 
 import (
-	"container/heap"
 	"fmt"
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"time"
 )
@@ -14,6 +14,11 @@ import (
 // REFS:
 //  - GOLANG HEAP https://pkg.go.dev/container/heap
 //  - Worker Queue tutorial: https://www.opsdash.com/blog/job-queues-in-go.html
+
+type Config struct {
+	EnablePolling bool   `yaml:"enable_polling"`
+	LogLevel      string `yaml:"log_level"`
+}
 
 type NetworkPollManager struct {
 	Config     *Config
@@ -27,6 +32,7 @@ type NetworkPollManager struct {
 	PortUnavailableTimeout    *time.Timer
 	QueueCheckerTimer         *time.Ticker
 	QueueCheckerCancelChannel chan bool
+	DeviceDurations           map[string][]time.Duration
 
 	// References
 	FFNetworkUUID string
@@ -34,96 +40,42 @@ type NetworkPollManager struct {
 	FFPluginUUID  string
 	PluginName    string
 
-	// Statistics
-	MaxPollExecuteTimeSecs        float64       // time in seconds for polling to complete (poll response time, doesn't include the time in queue).
-	AveragePollExecuteTimeSecs    float64       // time in seconds for polling to complete (poll response time, doesn't include the time in queue).
-	MinPollExecuteTimeSecs        float64       // time in seconds for polling to complete (poll response time, doesn't include the time in queue).
-	TotalPollQueueLength          int64         // number of polling points in the current queue.
-	TotalStandbyPointsLength      int64         // number of polling points in the standby list.
-	TotalPointsOutForPolling      int64         // number of points currently out for polling (currently being handled by the protocol plugin).
-	ASAPPriorityPollQueueLength   int64         // number of ASAP priority polling points in the current queue.
-	HighPriorityPollQueueLength   int64         // number of High priority polling points in the current queue.
-	NormalPriorityPollQueueLength int64         // number of Normal priority polling points in the current queue.
-	LowPriorityPollQueueLength    int64         // number of Low priority polling points in the current queue.
-	ASAPPriorityAveragePollTime   float64       // average time in seconds between ASAP priority polling point added to current queue, and polling complete.
-	HighPriorityAveragePollTime   float64       // average time in seconds between High priority polling point added to current queue, and polling complete.
-	NormalPriorityAveragePollTime float64       // average time in seconds between Normal priority polling point added to current queue, and polling complete.
-	LowPriorityAveragePollTime    float64       // average time in seconds between Low priority polling point added to current queue, and polling complete.
-	TotalPollCount                int64         // total number of polls completed.
-	ASAPPriorityPollCount         int64         // total number of ASAP priority polls completed.
-	HighPriorityPollCount         int64         // total number of High priority polls completed.
-	NormalPriorityPollCount       int64         // total number of Normal priority polls completed.
-	LowPriorityPollCount          int64         // total number of Low priority polls completed.
-	ASAPPriorityPollCountForAvg   int64         // number of poll times included in avg polling time for ASAP priority (some are excluded because they have been modified while in the queue).
-	HighPriorityPollCountForAvg   int64         // number of poll times included in avg polling time for High priority (some are excluded because they have been modified while in the queue).
-	NormalPriorityPollCountForAvg int64         // number of poll times included in avg polling time for Normal priority (some are excluded because they have been modified while in the queue).
-	LowPriorityPollCountForAvg    int64         // number of poll times included in avg polling time for Low priority (some are excluded because they have been modified while in the queue).
-	ASAPPriorityMaxCycleTime      time.Duration // threshold setting for triggering a lockup alert for ASAP priority.
-	HighPriorityMaxCycleTime      time.Duration // threshold setting for triggering a lockup alert for High priority.
-	NormalPriorityMaxCycleTime    time.Duration // threshold setting for triggering a lockup alert for Normal priority.
-	LowPriorityMaxCycleTime       time.Duration // threshold setting for triggering a lockup alert for Low priority.
-	ASAPPriorityLockupAlert       bool          // alert if poll time has exceeded the ASAPPriorityMaxCycleTime
-	HighPriorityLockupAlert       bool          // alert if poll time has exceeded the HighPriorityMaxCycleTime
-	NormalPriorityLockupAlert     bool          // alert if poll time has exceeded the NormalPriorityMaxCycleTime
-	LowPriorityLockupAlert        bool          // alert if poll time has exceeded the LowPriorityMaxCycleTime
-	PollingStartTimeUnix          int64         // unix time (seconds) at polling start time.  Used for calculating Busy Time.
-	BusyTime                      float64       // percent of the time that the plugin is actively polling.
-	EnabledTime                   float64       // time in seconds that the statistics have been running for.
-	PortUnavailableTime           float64       // time in seconds that the serial port has been unavailable.
-	PortUnavailableStartTime      int64         // unix time (seconds) when port became unavailable.  Used for calculating downtime.
+	// Settings
+	ASAPPriorityMaxCycleTime   time.Duration // threshold setting for triggering a lockup alert for ASAP priority.
+	HighPriorityMaxCycleTime   time.Duration // threshold setting for triggering a lockup alert for High priority.
+	NormalPriorityMaxCycleTime time.Duration // threshold setting for triggering a lockup alert for Normal priority.
+	LowPriorityMaxCycleTime    time.Duration // threshold setting for triggering a lockup alert for Low priority.
+
+	// Stats
+	Statistics PollStatistics
 }
 
 func (pm *NetworkPollManager) StartPolling() {
-	if !pm.Enable {
-		pm.Enable = true
-		pm.RebuildPollingQueue()
-		pm.StartQueueUnloader()
-	} else if pm.PluginQueueUnloader == nil {
-		pm.StartQueueUnloader()
-	}
-	// Also start the Queue Checker
+	pm.SetAllDevicePollRateDurations()
+	pm.RebuildPollingQueue()
+	pm.Enable = true
+	pm.PollQueue.Start()
 	pm.StartQueueCheckerAndStats()
 	pm.StartPollingStatistics()
 }
 
 func (pm *NetworkPollManager) StopPolling() {
 	pm.Enable = false
-	// pm.EmptyQueue()
-
-	pm.StopQueueUnloader()
-	// TODO: STOP ANY QUEUE LOADERS
-	for _, pp := range pm.PollQueue.StandbyPollingPoints.PriorityQueue {
-		if pp != nil && pp.RepollTimer != nil {
-			pp.RepollTimer.Stop()
-		}
-	}
-	pm.PollQueue.EmptyQueue()
+	pm.PollQueue.Stop()
 	if pm.QueueCheckerTimer != nil && pm.QueueCheckerCancelChannel != nil {
 		pm.StopQueueCheckerAndStats()
 	}
 }
 
-func (pm *NetworkPollManager) PausePolling() { // POLLING SHOULD NOT BE PAUSED FOR LONG OR THE QUEUE WILL BECOME TOO LONG
+func (pm *NetworkPollManager) PausePolling() {
 	pm.pollQueueDebugMsg("PausePolling()")
 	pm.Enable = false
-	var nextPP *PollingPoint = nil
-	if pm.PluginQueueUnloader.NextPollPoint != nil {
-		nextPP = pm.PluginQueueUnloader.NextPollPoint
-		pm.PollQueue.AddPollingPoint(nextPP) // add the next point back into the queue
-	}
-	pm.StopQueueUnloader()
 }
 
 func (pm *NetworkPollManager) UnpausePolling() {
 	pm.pollQueueDebugMsg("UnpausePolling()")
 	pm.Enable = true
 	pm.PortUnavailableTimeout = nil
-	pm.StartQueueUnloader()
-}
-
-func (pm *NetworkPollManager) EmptyQueue() {
-	pm.StopQueueUnloader()
-	pm.PollQueue.EmptyQueue()
 }
 
 func (pm *NetworkPollManager) ReAddDevicePoints(devUUID string) { // This is triggered by a user who wants to update the device poll times for standby points
@@ -135,37 +87,21 @@ func (pm *NetworkPollManager) ReAddDevicePoints(devUUID string) { // This is tri
 	pm.PollQueue.RemovePollingPointByDeviceUUID(devUUID)
 	for _, pnt := range dev.Points {
 		if boolean.IsTrue(pnt.Enable) {
-			pp := NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID, pm.FFPluginUUID)
+			pp := NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID)
 			pp.PollPriority = pnt.PollPriority
-			pm.PollQueue.AddPollingPoint(pp)
+			pm.PollQueue.AddToPriorityQueue(pp)
 		}
 	}
 }
 
-func NewPollManager(conf *Config, marshaller nmodule.Marshaller, ffNetworkUUID, ffNetworkName, ffPluginUUID, pluginName string, maxPollRate float64) *NetworkPollManager {
-	// Make the main priority polling queue
-	queue := make([]*PollingPoint, 0)
-	pq := &PriorityPollQueue{queue}
-	heap.Init(pq)                        // Init needs to be called on the main PriorityQueue so that it is maintained by PollingPriority.
-	refQueue := make([]*PollingPoint, 0) // Make the reference slice that contains points that are not in the current polling queue.
-	rq := &PriorityPollQueue{refQueue}
-	heap.Init(rq)                                // Init needs to be called on the main PriorityQueue so that it is maintained by PollingPriority.
-	outstandingQueue := make([]*PollingPoint, 0) // Make the reference slice that contains points that are not in the current polling queue.
-	opq := &PriorityPollQueue{outstandingQueue}
-	heap.Init(opq)
-	adl := make([]string, 0)
-	pqu := &QueueUnloader{nil, nil, nil}
-	puwp := make(map[string]bool)
-	npq := &NetworkPriorityPollQueue{conf, pq, rq, opq, puwp, pqu, ffPluginUUID, ffNetworkUUID, adl}
+func NewPollManager(conf *Config, marshaller nmodule.Marshaller, ffNetworkUUID, ffNetworkName, pluginName string) *NetworkPollManager {
 	pm := new(NetworkPollManager)
+	pm.Enable = false
 	pm.Config = conf
-	pm.PollQueue = npq
-	pm.PluginQueueUnloader = pqu
+	pm.PollQueue = NewNetworkPriorityPollQueue(conf)
 	pm.Marshaller = marshaller
-	pm.MaxPollRate, _ = time.ParseDuration(fmt.Sprintf("%fs", maxPollRate))
 	pm.FFNetworkUUID = ffNetworkUUID
 	pm.NetworkName = ffNetworkName
-	pm.FFPluginUUID = ffPluginUUID
 	pm.PluginName = pluginName
 	pm.ASAPPriorityMaxCycleTime, _ = time.ParseDuration("2m")
 	pm.HighPriorityMaxCycleTime, _ = time.ParseDuration("5m")
@@ -174,153 +110,118 @@ func NewPollManager(conf *Config, marshaller nmodule.Marshaller, ffNetworkUUID, 
 	return pm
 }
 
-func (pm *NetworkPollManager) GetPollRateDuration(rate datatype.PollRate, deviceUUID string) time.Duration {
-	var duration time.Duration
-
-	if pm.Marshaller != nil {
-		device, err := pm.Marshaller.GetDevice(deviceUUID, nil)
-		if err != nil {
-			pm.pollQueueDebugMsg(fmt.Sprintf("NetworkPollManager.GetPollRateDuration(): couldn't find device %s", deviceUUID))
-			return 30 * time.Second
-		}
-		// Get durations from device
-		switch rate {
-		case datatype.RateFast:
-			fastRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.FastPollRate)))
-			if fastRateDuration <= 100*time.Millisecond {
-				duration = 10 * time.Second
-			} else {
-				duration = fastRateDuration
-			}
-
-		case datatype.RateNormal:
-			normalRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.NormalPollRate)))
-			if normalRateDuration <= 500*time.Millisecond {
-				duration = 30 * time.Second
-			} else {
-				duration = normalRateDuration
-			}
-
-		case datatype.RateSlow:
-			slowRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.SlowPollRate)))
-			if slowRateDuration <= 1*time.Second {
-				duration = 120 * time.Second
-			} else {
-				duration = slowRateDuration
-			}
-
-		default:
-			pm.pollQueueDebugMsg("GetPollRateDuration(): UNKNOWN")
-			normalRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.SlowPollRate)))
-			if normalRateDuration <= 500*time.Millisecond {
-				duration = 30 * time.Second
-			} else {
-				duration = normalRateDuration
-			}
-		}
-	} else {
-		pm.pollQueueErrorMsg("GetPollRateDuration(): NetworkPollManager marshaller is undefined")
-		// use default durations
-		duration = 30 * time.Second
+func (pm *NetworkPollManager) SetAllDevicePollRateDurations() {
+	net, _ := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, &nmodule.Opts{Args: &nargs.Args{WithDevices: true}})
+	pm.DeviceDurations = make(map[string][]time.Duration, len(net.Devices))
+	for _, dev := range net.Devices {
+		pm.SetDevicePollRateDurations(dev)
 	}
-
-	// pm.pollQueueDebugMsg("GetPollRateDuration() device poll times: ", device.FastPollRate, device.NormalPollRate, device.SlowPollRate)
-	if duration.Milliseconds() <= 100 {
-		duration = 30 * time.Second
-		pm.pollQueueErrorMsg("NetworkPollManager.GetPollRateDuration: invalid PollRate duration. Set to 30 seconds")
-
-	}
-	return duration
 }
 
-func (pm *NetworkPollManager) PollingFinished(pp *PollingPoint, pollStartTime time.Time, writeSuccess, readSuccess, actualPoll, pollingWasNotRequired bool, retryType PollRetryType, callback func(pp *PollingPoint, writeSuccess bool, readSuccess bool, pollTimeSecs float64, pointUpdate, resetToConfiguredPriority bool, retryType PollRetryType, actualPoll, pollingWasNotRequired, justToReAdd bool)) {
+func (pm *NetworkPollManager) SetDevicePollRateDurations(device *model.Device) {
+	defFast := 10 * time.Second
+	defNorm := 30 * time.Second
+	defSlow := 120 * time.Second
+
+	fastRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.FastPollRate)))
+	if fastRateDuration <= 100*time.Millisecond {
+		fastRateDuration = defFast
+	}
+
+	normalRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.NormalPollRate)))
+	if normalRateDuration <= 500*time.Millisecond {
+		normalRateDuration = defNorm
+	}
+
+	slowRateDuration, _ := time.ParseDuration(fmt.Sprintf("%fs", float.NonNil(device.SlowPollRate)))
+	if slowRateDuration <= 1*time.Second {
+		slowRateDuration = defSlow
+	}
+
+	pm.DeviceDurations[device.UUID] = []time.Duration{fastRateDuration, normalRateDuration, slowRateDuration}
+}
+
+func (pm *NetworkPollManager) GetPollRateDuration(rate datatype.PollRate, deviceUUID string) time.Duration {
+	switch rate {
+	case datatype.RateFast:
+		return pm.DeviceDurations[deviceUUID][0]
+	case datatype.RateNormal:
+		return pm.DeviceDurations[deviceUUID][1]
+	case datatype.RateSlow:
+		return pm.DeviceDurations[deviceUUID][2]
+	default:
+		pm.pollQueueDebugMsg("GetPollRateDuration(): UNKNOWN", deviceUUID)
+		return pm.DeviceDurations[deviceUUID][2]
+	}
+}
+
+func (pm *NetworkPollManager) SinglePollFinished(pp *PollingPoint, point *model.Point, pollStartTime time.Time, writeSuccess, readSuccess, actualPoll, pollingWasNotRequired bool, retryType PollRetryType) {
 	pollEndTime := time.Now()
 	pollDuration := pollEndTime.Sub(pollStartTime)
 	pollTimeSecs := pollDuration.Seconds()
-	callback(pp, writeSuccess, readSuccess, pollTimeSecs, false, true, retryType, actualPoll, pollingWasNotRequired, false) // (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint, writeSuccess, readSuccess bool)
+	pm.PollingPointCompleteNotification(pp, point, writeSuccess, readSuccess, pollTimeSecs, false, true, retryType, actualPoll, pollingWasNotRequired)
 }
 
 func (pm *NetworkPollManager) PollQueueErrorChecking() {
-	pm.pollQueueDebugMsg("NetworkPollManager.PollQueueErrorChecking")
-
-	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, &nmodule.Opts{Args: &nargs.Args{WithDevices: true, WithPoints: true}}) // api.Args{WithDevices: true, WithPoints: true}
-	if net == nil || err != nil {
-		pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Network Not Found")
+	pm.pollQueueDebugMsg("pollQueue error check")
+	net, err := pm.Marshaller.GetNetwork(pm.FFNetworkUUID, &nmodule.Opts{Args: &nargs.Args{WithDevices: true, WithPoints: true}})
+	if err != nil {
+		pm.pollQueueErrorMsg("pollQueue error check: Network Not Found")
 		return
 	}
-	if boolean.IsFalse(net.Enable) { // If network isn't enabled, there should be no points in the polling queues
+	if boolean.IsFalse(net.Enable) {
 		if pm.PollQueue.PriorityQueue.Len() > 0 {
+			pm.pollQueueErrorMsg("pollQueue error check: Found PollingPoints in PriorityQueue of a disabled network")
 			pm.PollQueue.PriorityQueue.EmptyQueue()
-			pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Found PollingPoints in PriorityQueue of a disabled network")
 		}
 		if pm.PollQueue.StandbyPollingPoints.Len() > 0 {
+			pm.pollQueueErrorMsg("pollQueue error check: Found PollingPoints in StandbyPollingPoints of a disabled network")
 			pm.PollQueue.StandbyPollingPoints.EmptyQueue()
-			pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Found PollingPoints in StandbyPollingPoints of a disabled network")
-		}
-		if pm.PollQueue.OutstandingPollingPoints.Len() > 0 {
-			pm.PollQueue.OutstandingPollingPoints.EmptyQueue()
-			pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Found PollingPoints in OutstandingPollingPoints of a disabled network")
 		}
 	}
 	for _, dev := range net.Devices {
-		deviceExistsInQueue := pm.PollQueue.CheckIfActiveDevicesListIncludes(dev.UUID)
-		if boolean.IsFalse(net.Enable) || boolean.IsFalse(dev.Enable) {
-			if deviceExistsInQueue {
-				pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Device UUID exist in Poll Queues for a disabled device")
-				pm.PollQueue.RemovePollingPointByDeviceUUID(dev.UUID)
+		for _, pnt := range dev.Points {
+			pp := pm.PollQueue.GetPollingPointByPointUUID(pnt.UUID)
+			if boolean.IsFalse(dev.Enable) {
+				if pp != nil {
+					pm.pollQueueErrorMsg("pollQueue error check: Found point in poll queue of disabled device", pnt.Name, pnt.UUID)
+					pm.PollQueue.RemovePollingPointByDeviceUUID(dev.UUID)
+				}
 				continue
 			}
-		}
-		if boolean.IsTrue(net.Enable) && boolean.IsTrue(dev.Enable) && !deviceExistsInQueue {
-			pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Device UUID doesn't exist in active devices list")
-		}
-		if dev.Points != nil {
-			for _, pnt := range dev.Points {
-				if pnt != nil {
-					if boolean.IsFalse(net.Enable) || boolean.IsFalse(dev.Enable) || boolean.IsFalse(pnt.Enable) {
-						pp, _ := pm.PollQueue.GetPollingPointByPointUUID(pnt.UUID)
-						if pp != nil {
-							pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Found disabled point in poll queue")
-							pm.PollQueue.RemovePollingPointByPointUUID(pnt.UUID)
-						}
-						continue
-					}
-					if boolean.IsTrue(net.Enable) && boolean.IsTrue(dev.Enable) && boolean.IsTrue(pnt.Enable) {
-						pp, err := pm.PollQueue.GetPollingPointByPointUUID(pnt.UUID)
-						if pp == nil || err != nil {
-							pm.pollQueueErrorMsg("NetworkPollManager.PollQueueErrorChecking: Polling point doesn't exist for point ", pnt.Name)
-							pp = NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID, pm.FFPluginUUID)
-							pm.PollingPointCompleteNotification(pp, false, false, 0, true, true, NORMAL_RETRY, false, false, true) // This will perform the queue re-add actions based on Point WriteMode.
-						}
-						continue
-					}
+			if boolean.IsFalse(pnt.Enable) {
+				if pp != nil {
+					pm.pollQueueErrorMsg("pollQueue error check: Found disabled point in poll queue ", pnt.Name, pnt.UUID)
+					pm.PollQueue.RemovePollingPointByPointUUID(pnt.UUID)
 				}
+				continue
+			}
+			if pp == nil {
+				pm.pollQueueErrorMsg("pollQueue error check: Polling point doesn't exist for point ", pnt.Name, pnt.UUID)
+				pp = NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID)
+				pm.PollingPointCompleteNotification(pp, pnt, false, false, 0, true, true, NORMAL_RETRY, false, false) // This will perform the queue re-add actions based on Point WriteMode.
+				continue
 			}
 		}
 	}
 }
 
 func (pm *NetworkPollManager) StartQueueCheckerAndStats() {
-	period := 30 * time.Second
 	if pm.QueueCheckerTimer != nil {
 		pm.QueueCheckerTimer.Stop()
 	}
-	pm.QueueCheckerTimer = nil
 	if pm.QueueCheckerCancelChannel != nil {
 		pm.QueueCheckerCancelChannel <- true
 	}
-	pm.QueueCheckerCancelChannel = nil
-	ticker := time.NewTicker(period)
-	pm.QueueCheckerTimer = ticker
-	done := make(chan bool)
-	pm.QueueCheckerCancelChannel = done
+
+	pm.QueueCheckerTimer = time.NewTicker(5 * time.Minute)
+	pm.QueueCheckerCancelChannel = make(chan bool)
 	go func() {
 		for {
 			select {
-			case <-done:
+			case <-pm.QueueCheckerCancelChannel:
 				return
-			case <-ticker.C:
-				// pm.pollQueueDebugMsg("RELOAD QUEUE TICKER")
+			case <-pm.QueueCheckerTimer.C:
 				pm.PollQueueErrorChecking()
 				pm.PrintPollQueueStatistics()
 			}
@@ -336,7 +237,7 @@ func (pm *NetworkPollManager) StopQueueCheckerAndStats() {
 }
 
 func (pm *NetworkPollManager) PortUnavailable() {
-	pm.PortUnavailableStartTime = time.Now().Unix()
+	pm.Statistics.PortUnavailableStartTime = time.Now().Unix()
 	pm.PausePolling()
 }
 

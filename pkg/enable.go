@@ -1,71 +1,50 @@
 package pkg
 
 import (
-	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
+	"github.com/NubeIO/module-core-modbus/smod"
+	log "github.com/sirupsen/logrus"
 )
 
 func (m *Module) Enable() error {
-	m.enabled = true
-	m.fault = false
+	log.Info("plugin Enable()")
 	m.setUUID()
 
-	nets, err := m.grpcMarshaller.GetNetworksByPluginName(m.moduleName)
+	nets, err := m.grpcMarshaller.GetNetworksByPlugin(m.pluginUUID)
 	if err != nil {
-		m.networks = nil
-	} else if nets != nil {
-		m.networks = nets
+		return err
 	}
 
 	if m.config.EnablePolling {
-		if !m.pollingEnabled {
-			var arg polling
-			m.pollingEnabled = true
-			arg.enable = true
-			m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, 0)
-			for _, net := range nets {
-				conf := m.GetConfig().(*Config)
-				if conf.PollQueueLogLevel != "ERROR" && conf.PollQueueLogLevel != "DEBUG" && conf.PollQueueLogLevel != "POLLING" {
-					conf.PollQueueLogLevel = "ERROR"
-				}
-				pollQueueConfig := pollqueue.Config{EnablePolling: conf.EnablePolling, LogLevel: conf.PollQueueLogLevel}
-				pollManager := NewPollManager(
-					&pollQueueConfig,
-					m.grpcMarshaller,
-					net.UUID,
-					net.Name,
-					m.pluginUUID,
-					m.moduleName,
-					float.NonNil(net.MaxPollRate),
-				)
-				pollManager.StartPolling()
-				m.NetworkPollManagers = append(m.NetworkPollManagers, pollManager)
-			}
-			m.running = true
-			if err := m.ModbusPolling(); err != nil {
-				m.fault = true
-				m.running = false
-				m.modbusErrorMsg("POLLING ERROR on routine: %v\n", err)
-			}
+		var arg polling
+		arg.enable = true
+		for _, pm := range m.NetworkPollManagers {
+			pm.StopPolling()
 		}
+		m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, len(nets))
+		m.mbClients = make(map[string]*smod.ModbusClient, len(nets))
+		for i, net := range nets {
+			if m.config.PollQueueLogLevel != "ERROR" && m.config.PollQueueLogLevel != "DEBUG" && m.config.PollQueueLogLevel != "POLLING" {
+				m.config.PollQueueLogLevel = "ERROR"
+			}
+			pollQueueConfig := pollqueue.Config{EnablePolling: m.config.EnablePolling, LogLevel: m.config.PollQueueLogLevel}
+			pollManager := pollqueue.NewPollManager(&pollQueueConfig, m.grpcMarshaller, net.UUID, net.Name, m.moduleName)
+			pollManager.StartPolling()
+			m.NetworkPollManagers[i] = pollManager
+		}
+		m.initiatePolling()
 	}
-
 	return nil
 }
 
 func (m *Module) Disable() error {
 	m.modbusPollingMsg("MODBUS Plugin Disable()")
-	m.enabled = false
-	if m.pollingEnabled {
-		m.pollingEnabled = false
-		m.pollingCancel()
-		m.pollingCancel = nil
-		for _, pollMan := range m.NetworkPollManagers {
-			pollMan.StopPolling()
-		}
-		m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, 0)
+	m.pollingCancel()
+	m.pollingCancel = nil
+	for _, pollMan := range m.NetworkPollManagers {
+		pollMan.StopPolling()
 	}
-	m.running = false
-	m.fault = false
+	m.NetworkPollManagers = nil
+	m.mbClients = nil
 	return nil
 }
