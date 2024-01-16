@@ -1,0 +1,19 @@
+FROM golang:1.18-buster AS module-builder
+
+RUN apt-get update && apt-get install -y git
+
+WORKDIR /app
+COPY go.mod ./
+COPY go.sum ./
+
+ARG MODULE_NAME
+ARG GITHUB_TOKEN
+
+RUN go env -w GOPRIVATE=github.com/NubeIO
+RUN git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/NubeIO".insteadOf "https://github.com/NubeIO"
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -o ${MODULE_NAME}
