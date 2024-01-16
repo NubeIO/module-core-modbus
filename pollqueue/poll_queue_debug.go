@@ -2,6 +2,7 @@ package pollqueue
 
 import (
 	"fmt"
+
 	"github.com/NubeIO/lib-utils-go/nstring"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +53,7 @@ func (pm *NetworkPollManager) PrintPollQueuePointUUIDs() {
 		pm.pollQueueDebugMsg(printString)
 	}
 }
+
 func (pm *NetworkPollManager) PrintPointDebugInfo(pnt *model.Point) {
 	if nstring.IsEqualIgnoreCase(pm.Config.LogLevel, "DEBUG") { // Added here to disable debug processes when not using logging
 		printString := "\n\n"
@@ -140,13 +142,16 @@ func (pm *NetworkPollManager) PrintPointDebugInfo(pnt *model.Point) {
 		pm.pollQueueDebugMsg("ERROR: INVALID POINT")
 	}
 }
+
 func (pm *NetworkPollManager) PrintPollingPointDebugInfo(pp *PollingPoint) {
 	if pp != nil {
 		pm.pollQueueDebugMsg(fmt.Sprintf("PollingPoint pp %+v", pp))
 	}
 }
+
 func (pm *NetworkPollManager) PrintPollQueueStatistics() {
 	if nstring.IsEqualIgnoreCase(pm.Config.LogLevel, "DEBUG") { // Added here to disable debug processes when not using logging
+
 		pm.PrintPollQueuePointUUIDs()
 
 		printString := "\n\n"

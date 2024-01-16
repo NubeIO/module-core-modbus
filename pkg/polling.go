@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
+	"time"
+
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
@@ -17,9 +21,6 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"strconv"
-	"time"
 )
 
 type polling struct {
@@ -72,13 +73,13 @@ func (m *Module) modbusPolling() (bool, error) {
 
 		dev, ok, retryMode := m.getAndCheckDevice(pp.FFDeviceUUID)
 		if !ok {
-			netPollMan.SinglePollFinished(pp, nil, pollStartTime, false, false, false, true, retryMode)
+			netPollMan.SinglePollFinished(pp, nil, pollStartTime, false, false, true, retryMode)
 			continue
 		}
 
 		pnt, ok, retryMode := m.getAndCheckPoint(pp.FFPointUUID)
 		if !ok {
-			netPollMan.SinglePollFinished(pp, nil, pollStartTime, false, false, false, true, retryMode)
+			netPollMan.SinglePollFinished(pp, nil, pollStartTime, false, false, true, retryMode)
 			continue
 		}
 
@@ -92,7 +93,7 @@ func (m *Module) modbusPolling() (bool, error) {
 			mbClient, err = m.createMbClient(netPollMan, net, dev)
 			if err != nil {
 				m.modbusErrorMsg(fmt.Sprintf("failed to set client error: %v. network name:%s", err, net.Name))
-				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, false, pollqueue.NORMAL_RETRY)
+				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.NORMAL_RETRY)
 				continue
 			}
 		}
@@ -104,7 +105,7 @@ func (m *Module) modbusPolling() (bool, error) {
 				errMes := fmt.Sprintf("failed to validate device address: %s, %s", url, err1.Error())
 				m.modbusErrorMsg(errMes)
 				m.updateNetworkMessage(net, "", errors.New(errMes), m.pollCounter)
-				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, false, pollqueue.DELAYED_RETRY)
+				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 				continue
 			}
 			mbClient.TCPClientHandler.Address = url
@@ -112,7 +113,7 @@ func (m *Module) modbusPolling() (bool, error) {
 		} else {
 			errMes := fmt.Sprintf("invalid network transport type: %s, net: %s, err: %v", net.TransportType, net.Name, err)
 			m.modbusDebugMsg(errMes)
-			netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, false, pollqueue.DELAYED_RETRY)
+			netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 			m.updateNetworkMessage(net, "", errors.New(errMes), m.pollCounter)
 			continue
 		}
@@ -133,7 +134,7 @@ func (m *Module) modbusPolling() (bool, error) {
 			readResponse, readResponseValue, err = m.networkRead(mbClient, pnt)
 			if err != nil {
 				err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
-				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, true, false, pollqueue.IMMEDIATE_RETRY)
+				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.IMMEDIATE_RETRY)
 				continue
 			}
 			if bitwiseType {
@@ -142,7 +143,7 @@ func (m *Module) modbusPolling() (bool, error) {
 				if err != nil {
 					m.modbusDebugMsg("Bitwise Error: ", err)
 					err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
-					netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, true, false, pollqueue.DELAYED_RETRY)
+					netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 					continue
 				}
 				if bitValue {
@@ -171,7 +172,7 @@ func (m *Module) modbusPolling() (bool, error) {
 				if bitwiseType {
 					if !readSuccess || math.Mod(readResponseValue, 1) != 0 {
 						err = m.pointUpdateErr(pnt, "read fail: bitwise point needs successful read before write", dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
-						netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, true, false, pollqueue.DELAYED_RETRY)
+						netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 						continue
 					}
 					// Set appropriate writeValue for the bitwise type.  This value is the readResponseValue with the bit index modified
@@ -187,7 +188,7 @@ func (m *Module) modbusPolling() (bool, error) {
 				writeResponse, writeResponseValue, err = m.networkWrite(mbClient, pnt)
 				if err != nil {
 					err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointWriteError)
-					netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, true, false, pollqueue.IMMEDIATE_RETRY)
+					netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.IMMEDIATE_RETRY)
 					continue
 				}
 				if bitwiseType {
@@ -246,7 +247,7 @@ func (m *Module) modbusPolling() (bool, error) {
 			}
 		}
 
-		netPollMan.SinglePollFinished(pp, pnt, pollStartTime, writeSuccess, readSuccess, true, false, pollqueue.NORMAL_RETRY)
+		netPollMan.SinglePollFinished(pp, pnt, pollStartTime, writeSuccess, readSuccess, false, pollqueue.NORMAL_RETRY)
 
 	}
 	return false, nil

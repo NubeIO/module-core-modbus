@@ -3,6 +3,9 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/NubeIO/lib-utils-go/array"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
@@ -13,8 +16,6 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"go.bug.st/serial"
-	"strings"
-	"time"
 )
 
 func (m *Module) addNetwork(body *model.Network) (network *model.Network, err error) {
@@ -37,19 +38,8 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 		pollManager.StartPolling()
 		m.NetworkPollManagers = append(m.NetworkPollManagers, pollManager)
 	} else {
-		err = m.networkUpdateErr(
-			network,
-			"network disabled",
-			dto.MessageLevel.Warning,
-			dto.CommonFaultCode.NetworkError,
-		)
-		err = m.grpcMarshaller.UpdateNetworkDescendantsErrors(
-			network.UUID,
-			"network disabled",
-			dto.MessageLevel.Warning,
-			dto.CommonFaultCode.NetworkError,
-			true,
-		)
+		err = m.networkUpdateErr(network, "network disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.NetworkError)
+		err = m.grpcMarshaller.UpdateNetworkDescendantsErrors(network.UUID, "network disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.NetworkError, true)
 	}
 	return network, nil
 }
@@ -70,12 +60,7 @@ func (m *Module) addDevice(body *model.Device) (device *model.Device, err error)
 
 	if boolean.IsFalse(device.Enable) {
 		err = m.deviceUpdateErr(device, "device disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.DeviceError)
-		err = m.grpcMarshaller.UpdateDeviceDescendantsErrors(
-			device.UUID,
-			"device disabled",
-			dto.MessageLevel.Warning,
-			dto.CommonFaultCode.DeviceError,
-		)
+		err = m.grpcMarshaller.UpdateDeviceDescendantsErrors(device.UUID, "device disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.DeviceError)
 	}
 
 	netPollMan, err := m.getNetworkPollManagerByUUID(device.NetworkUUID)
@@ -137,22 +122,14 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if boolean.IsTrue(point.Enable) {
 		netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
 		pp := pollqueue.NewPollingPoint(point.UUID, point.DeviceUUID, dev.NetworkUUID)
-		netPollMan.PollingPointCompleteNotification(
-			pp,
-			point,
-			false,
-			false,
-			0,
-			true,
-			true,
-			pollqueue.NORMAL_RETRY,
-			false,
-			false,
-		) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+		if pollqueue.PollOnStartCheck(point) {
+			netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, true, pollqueue.NORMAL_RETRY, false)
+		} else {
+			netPollMan.PollingPointCompleteNotification(pp, point, true, true, 0, true, false, pollqueue.NORMAL_RETRY, true)
+		}
 	} else {
 		err = m.pointUpdateErr(point, "point disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.PointError)
 	}
-
 	return point, nil
 }
 
@@ -163,7 +140,7 @@ func (m *Module) updateNetwork(uuid string, body *model.Network) (network *model
 		return
 	}
 
-	// Indicates that ui should display polling statistics
+	// indicates that ui should display polling statistics
 	body.HasPollingStatistics = true
 
 	if boolean.IsFalse(body.Enable) {
@@ -203,13 +180,7 @@ func (m *Module) updateNetwork(uuid string, body *model.Network) (network *model
 	if boolean.IsFalse(network.Enable) && netPollMan.Enable == true {
 		// DO POLLING DISABLE ACTIONS
 		netPollMan.StopPolling()
-		m.grpcMarshaller.UpdateNetworkDescendantsErrors(
-			network.UUID,
-			"network disabled",
-			dto.MessageLevel.Warning,
-			dto.CommonFaultCode.DeviceError,
-			true,
-		)
+		m.grpcMarshaller.UpdateNetworkDescendantsErrors(network.UUID, "network disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.DeviceError, true)
 	} else if restartPolling || (boolean.IsTrue(network.Enable) && netPollMan.Enable == false) {
 		if restartPolling {
 			netPollMan.StopPolling()
@@ -265,12 +236,7 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 	}
 	if boolean.IsFalse(device.Enable) {
 		// DO POLLING DISABLE ACTIONS FOR DEVICE
-		m.grpcMarshaller.UpdateDeviceDescendantsErrors(
-			device.UUID,
-			"device disabled",
-			dto.MessageLevel.Warning,
-			dto.CommonFaultCode.DeviceError,
-		)
+		m.grpcMarshaller.UpdateDeviceDescendantsErrors(device.UUID, "device disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.DeviceError)
 		netPollMan.PollQueue.RemovePollingPointByDeviceUUID(device.UUID)
 
 	} else if boolean.IsTrue(device.Enable) {
@@ -282,18 +248,11 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 		for _, pnt := range device.Points {
 			if boolean.IsTrue(pnt.Enable) {
 				pp := pollqueue.NewPollingPoint(pnt.UUID, pnt.DeviceUUID, device.NetworkUUID)
-				netPollMan.PollingPointCompleteNotification(
-					pp,
-					pnt,
-					false,
-					false,
-					0,
-					true,
-					true,
-					pollqueue.NORMAL_RETRY,
-					false,
-					false,
-				) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+				if pollqueue.PollOnStartCheck(pnt) {
+					netPollMan.PollingPointCompleteNotification(pp, pnt, false, false, 0, true, true, pollqueue.NORMAL_RETRY, false)
+				} else {
+					netPollMan.PollingPointCompleteNotification(pp, pnt, true, true, 0, true, false, pollqueue.NORMAL_RETRY, true)
+				}
 			}
 		}
 	}
@@ -354,30 +313,18 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusErrorMsg("updatePoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(
-			point,
-			"cannot find NetworkPollManager for network",
-			dto.MessageLevel.Fail,
-			dto.CommonFaultCode.SystemError,
-		)
+		_ = m.pointUpdateErr(point, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return
 	}
 
 	if boolean.IsTrue(point.Enable) && boolean.IsTrue(dev.Enable) {
 		netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
 		pp := pollqueue.NewPollingPoint(point.UUID, point.DeviceUUID, dev.NetworkUUID)
-		netPollMan.PollingPointCompleteNotification(
-			pp,
-			point,
-			false,
-			false,
-			0,
-			true,
-			true,
-			pollqueue.NORMAL_RETRY,
-			false,
-			false,
-		) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+		if pollqueue.PollOnStartCheck(point) {
+			netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, true, pollqueue.NORMAL_RETRY, false)
+		} else {
+			netPollMan.PollingPointCompleteNotification(pp, point, true, true, 0, true, false, pollqueue.NORMAL_RETRY, true)
+		}
 	} else {
 		netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
 	}
@@ -439,7 +386,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 				return point, err
 			}
 			// pp.PollPriority = model.PRIORITY_ASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
-			netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, false, pollqueue.IMMEDIATE_RETRY, false, false) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+			netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, false, pollqueue.IMMEDIATE_RETRY, false) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
 		}
 	}
 	return point, nil
