@@ -332,7 +332,6 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 }
 
 func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model.Point, err error) {
-	point = nil
 	m.modbusDebugMsg("writePoint(): ", pntUUID)
 	if body == nil {
 		m.modbusDebugMsg("writePoint(): nil point object")
@@ -345,6 +344,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 		return nil, err
 	}
 
+	point = &pnt.Point
 	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID)
 	if err != nil || dev == nil {
 		m.modbusDebugMsg("writePoint(): bad response from GetDevice()")
