@@ -1,8 +1,9 @@
 package pollqueue
 
 import (
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"sync"
+
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 )
 
 // StandbyPollQueue type is a standard slice protected by a mutex
@@ -52,9 +53,17 @@ func (q *StandbyPollQueue) RemovePollingPointByPointUUID(pointUUID string) *Poll
 func (q *StandbyPollQueue) RemovePollingPointByDeviceUUID(deviceUUID string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for index, pp := range q.queue {
-		if pp.FFDeviceUUID == deviceUUID {
-			q.removePollingPoint(index)
+	for {
+		found := false
+		for index, pp := range q.queue {
+			if pp.FFDeviceUUID == deviceUUID {
+				q.removePollingPoint(index)
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
 		}
 	}
 	return true
@@ -63,9 +72,17 @@ func (q *StandbyPollQueue) RemovePollingPointByDeviceUUID(deviceUUID string) boo
 func (q *StandbyPollQueue) RemovePollingPointByNetworkUUID(networkUUID string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for index, pp := range q.queue {
-		if pp.FFNetworkUUID == networkUUID {
-			q.removePollingPoint(index)
+	for {
+		found := false
+		for index, pp := range q.queue {
+			if pp.FFNetworkUUID == networkUUID {
+				q.removePollingPoint(index)
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
 		}
 	}
 	return true

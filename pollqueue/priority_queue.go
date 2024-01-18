@@ -3,8 +3,9 @@ package pollqueue
 import (
 	"container/heap"
 	"errors"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"sync"
+
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 )
 
 // PriorityPollQueue type defines the base methods used to implement the `heap` library.  https://pkg.go.dev/container/heap
@@ -111,9 +112,17 @@ func (q *PriorityPollQueue) RemovePollingPointByPointUUID(pointUUID string) *Pol
 func (q *PriorityPollQueue) RemovePollingPointByDeviceUUID(deviceUUID string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for index, pp := range q.priorityQueue {
-		if pp.FFDeviceUUID == deviceUUID {
-			q.removePollingPoint(index)
+	for {
+		found := false
+		for index, pp := range q.priorityQueue {
+			if pp.FFDeviceUUID == deviceUUID {
+				q.removePollingPoint(index)
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
 		}
 	}
 	return true
@@ -122,9 +131,17 @@ func (q *PriorityPollQueue) RemovePollingPointByDeviceUUID(deviceUUID string) bo
 func (q *PriorityPollQueue) RemovePollingPointByNetworkUUID(networkUUID string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for index, pp := range q.priorityQueue {
-		if pp.FFNetworkUUID == networkUUID {
-			q.removePollingPoint(index)
+	for {
+		found := false
+		for index, pp := range q.priorityQueue {
+			if pp.FFNetworkUUID == networkUUID {
+				q.removePollingPoint(index)
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
 		}
 	}
 	return true

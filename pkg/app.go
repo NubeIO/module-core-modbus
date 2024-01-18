@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/array"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
@@ -14,6 +15,7 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
 	"go.bug.st/serial"
 )
 
@@ -215,7 +217,7 @@ func (m *Module) updateDevice(uuid string, body *model.Device) (device *model.De
 	}
 
 	if boolean.IsTrue(device.Enable) { // If Enabled we need to GetDevice so we get Points
-		device, err = m.grpcMarshaller.GetDevice(device.UUID)
+		device, err = m.grpcMarshaller.GetDevice(device.UUID, &nmodule.Opts{Args: &nargs.Args{WithPoints: true}})
 		if err != nil || device == nil {
 			return nil, err
 		}
@@ -352,10 +354,6 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 
 	if boolean.IsTrue(point.Enable) {
 		if pnt.IsWriteValueChange || point.WriteMode == datatype.WriteOnceReadOnce || point.WriteMode == datatype.WriteOnce || (point.WriteMode == datatype.WriteOnceThenRead && *point.WriteValue != *point.OriginalValue) { // if the write value has changed, we need to re-add the point so that it is polled asap (if required)
-			pp := netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
-			if pp == nil { // this most likely fails when pp is the current polling point (out for polling). pls don't try to account for this scenario
-				return nil, errors.New("polling point doesn't exist or is currently out for polling. please try again")
-			}
 			if IsWriteable(point.WriteMode) {
 				point.WritePollRequired = boolean.NewTrue()
 			} else {
@@ -377,8 +375,11 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 				m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 				return point, err
 			}
-			// pp.PollPriority = model.PRIORITY_ASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
-			netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, false, pollqueue.IMMEDIATE_RETRY, false) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+			pp := netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
+			if pp != nil { // this most likely fails when the device is disabled
+				// pp.PollPriority = model.PRIORITY_ASAP   // TODO: THIS NEEDS TO BE IMPLEMENTED SO THAT ONLY MANUAL WRITES ARE PROMOTED TO ASAP PRIORITY
+				netPollMan.PollingPointCompleteNotification(pp, point, false, false, 0, true, false, pollqueue.IMMEDIATE_RETRY, false) // This will perform the queue re-add actions based on Point WriteMode. TODO: check function of pointUpdate argument.
+			}
 		}
 	}
 	return point, nil

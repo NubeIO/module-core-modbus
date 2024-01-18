@@ -60,17 +60,17 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 		pm.PollCompleteStatsUpdate(pp, pollTimeSecs)
 	}
 
-	// Reset poll priority to set value (in cases where pp has been escalated to ASAP).
-	if resetToConfiguredPriority {
-		pp.PollPriority = point.PollPriority
-	}
-
 	pp.resetPollingPointTimers()
 
 	// point was deleted while it was out for polling
-	if pm.PollQueue.QueueUnloader.RemoveCurrent && pm.PollQueue.QueueUnloader.CurrentPollPoint.FFPointUUID == pp.FFPointUUID {
+	if point == nil || (pm.PollQueue.QueueUnloader.RemoveCurrent && pm.PollQueue.QueueUnloader.CurrentPollPoint.FFPointUUID == pp.FFPointUUID) {
 		pm.PollQueue.QueueUnloader.RemoveCurrent = false
 		return
+	}
+
+	// Reset poll priority to set value (in cases where pp has been escalated to ASAP).
+	if resetToConfiguredPriority {
+		pp.PollPriority = point.PollPriority
 	}
 
 	// instantly re-add if it was updated while polling

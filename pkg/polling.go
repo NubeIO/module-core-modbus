@@ -68,7 +68,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 	}
 
 	if netPollMan.PortUnavailableTimeout != nil {
-		m.modbusDebugMsg("skipping poll, port unavailable", netPollMan.FFNetworkUUID)
+		m.modbusDebugMsg("skipping poll, port unavailable ", netPollMan.FFNetworkUUID)
 		return false, nil
 	}
 
@@ -79,7 +79,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 
 	pp := netPollMan.GetNextPollingPoint()
 	if pp == nil {
-		m.modbusDebugMsg("skipping poll, no points to poll", net.Name, net.UUID)
+		m.modbusDebugMsg("skipping poll, no points to poll ", net.Name, net.UUID)
 		return false, nil
 	}
 	pollStartTime := time.Now()
@@ -280,7 +280,7 @@ func (m *Module) getAndCheckNetwork(uuid string) (*model.Network, bool) {
 		return nil, false
 	}
 	if !boolean.IsTrue(net.Enable) {
-		m.modbusDebugMsg("skipping poll, network disabled", net.Name, net.UUID)
+		m.modbusDebugMsg("skipping poll, network disabled ", net.Name, net.UUID)
 		return nil, false
 	}
 
@@ -290,15 +290,15 @@ func (m *Module) getAndCheckNetwork(uuid string) (*model.Network, bool) {
 func (m *Module) getAndCheckDevice(uuid string) (*model.Device, bool, pollqueue.PollRetryType) {
 	dev, err := m.grpcMarshaller.GetDevice(uuid)
 	if dev == nil || err != nil {
-		m.modbusErrorMsg("skipping poll, could not find device", uuid)
+		m.modbusErrorMsg("skipping poll, could not find device ", uuid)
 		return nil, false, pollqueue.DELAYED_RETRY
 	}
 	if boolean.IsFalse(dev.Enable) {
-		m.modbusErrorMsg("skipping poll, device disabled", dev.Name, dev.UUID)
+		m.modbusErrorMsg("skipping poll, device disabled ", dev.Name, dev.UUID)
 		return nil, false, pollqueue.NEVER_RETRY
 	}
 	if dev.AddressId <= 0 || dev.AddressId >= 255 {
-		m.modbusErrorMsg("skipping poll, invalid device address", dev.Name, dev.UUID)
+		m.modbusErrorMsg("skipping poll, invalid device address ", dev.Name, dev.UUID)
 		return nil, false, pollqueue.NEVER_RETRY
 	}
 	return dev, true, ""
@@ -314,12 +314,12 @@ func (m *Module) getAndCheckPoint(uuid string) (*model.Point, bool, pollqueue.Po
 	m.printPointDebugInfo(pnt)
 
 	if boolean.IsFalse(pnt.Enable) {
-		m.modbusErrorMsg("skipping poll, point disabled", pnt.Name, pnt.UUID)
+		m.modbusErrorMsg("skipping poll, point disabled ", pnt.Name, pnt.UUID)
 		return nil, false, pollqueue.NEVER_RETRY
 	}
 
 	if boolean.IsFalse(pnt.WritePollRequired) && boolean.IsFalse(pnt.ReadPollRequired) {
-		m.modbusDebugMsg("skipping poll, polling not required", pnt.Name, pnt.UUID)
+		m.modbusDebugMsg("skipping poll, polling not required ", pnt.Name, pnt.UUID)
 		return nil, false, pollqueue.NORMAL_RETRY
 	}
 
