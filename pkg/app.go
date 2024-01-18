@@ -9,7 +9,6 @@ import (
 	"github.com/NubeIO/lib-utils-go/array"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
-	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/times/utilstime"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
@@ -29,14 +28,7 @@ func (m *Module) addNetwork(body *model.Network) (network *model.Network, err er
 	}
 
 	if boolean.IsTrue(network.Enable) {
-		conf := m.GetConfig().(*Config)
-		pollQueueConfig := pollqueue.Config{
-			EnablePolling: conf.EnablePolling,
-			LogLevel:      conf.LogLevel,
-		}
-		pollManager := pollqueue.NewPollManager(&pollQueueConfig, m.grpcMarshaller, network.UUID, network.Name, m.moduleName)
-		pollManager.StartPolling()
-		m.NetworkPollManagers = append(m.NetworkPollManagers, pollManager)
+		m.initiatePolling(m.pollingContext, network)
 	} else {
 		err = m.networkUpdateErr(network, "network disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.NetworkError)
 		err = m.grpcMarshaller.UpdateNetworkDescendantsErrors(network.UUID, "network disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.NetworkError, true)
@@ -85,7 +77,7 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 		body.WritePollRequired = boolean.NewTrue()
 		body.EnableWriteable = boolean.NewTrue()
 	} else {
-		body = writemode.ResetWriteableProperties(body)
+		body = resetWriteableProperties(body)
 	}
 	body.ReadPollRequired = boolean.NewTrue()
 
@@ -277,7 +269,7 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 		body.WritePollRequired = boolean.NewTrue()
 		body.EnableWriteable = boolean.NewTrue()
 	} else {
-		body = writemode.ResetWriteableProperties(body)
+		body = resetWriteableProperties(body)
 	}
 
 	isTypeBool := checkForBooleanType(body.ObjectType, body.DataType)
@@ -364,7 +356,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 			if pp == nil { // this most likely fails when pp is the current polling point (out for polling). pls don't try to account for this scenario
 				return nil, errors.New("polling point doesn't exist or is currently out for polling. please try again")
 			}
-			if writemode.IsWriteable(point.WriteMode) {
+			if IsWriteable(point.WriteMode) {
 				point.WritePollRequired = boolean.NewTrue()
 			} else {
 				point.WritePollRequired = boolean.NewFalse()

@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"context"
+
 	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/module-core-modbus/smod"
 	log "github.com/sirupsen/logrus"
@@ -15,24 +17,22 @@ func (m *Module) Enable() error {
 		return err
 	}
 
+	m.pollingContext, m.pollingCancel = context.WithCancel(context.Background())
+
 	if m.config.EnablePolling {
-		var arg polling
-		arg.enable = true
 		for _, pm := range m.NetworkPollManagers {
 			pm.StopPolling()
 		}
-		m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, len(nets))
-		m.mbClients = make(map[string]*smod.ModbusClient, len(nets))
-		for i, net := range nets {
-			if m.config.PollQueueLogLevel != "ERROR" && m.config.PollQueueLogLevel != "DEBUG" && m.config.PollQueueLogLevel != "POLLING" {
-				m.config.PollQueueLogLevel = "ERROR"
-			}
-			pollQueueConfig := pollqueue.Config{EnablePolling: m.config.EnablePolling, LogLevel: m.config.PollQueueLogLevel}
-			pollManager := pollqueue.NewPollManager(&pollQueueConfig, m.grpcMarshaller, net.UUID, net.Name, m.moduleName)
-			pollManager.StartPolling()
-			m.NetworkPollManagers[i] = pollManager
+
+		if m.config.PollQueueLogLevel != "ERROR" && m.config.PollQueueLogLevel != "DEBUG" && m.config.PollQueueLogLevel != "POLLING" {
+			m.config.PollQueueLogLevel = "ERROR"
 		}
-		m.initiatePolling()
+		m.NetworkPollManagers = make([]*pollqueue.NetworkPollManager, 0, len(nets))
+		m.mbClients = make(map[string]*smod.ModbusClient, len(nets))
+
+		for _, net := range nets {
+			m.initiatePolling(m.pollingContext, net)
+		}
 	}
 	return nil
 }

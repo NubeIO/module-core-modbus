@@ -2,6 +2,8 @@ package pkg
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/module-core-modbus/smod"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
@@ -9,7 +11,6 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/grid-x/modbus"
-	"time"
 )
 
 type Client struct {
@@ -34,7 +35,7 @@ func (m *Module) createMbClient(netPollMan *pollqueue.NetworkPollManager, net *m
 		// 	}
 		// 	netPollMan.PortUnavailableTimeout = time.AfterFunc(10*time.Second, unpauseFunc)
 		// }
-		m.updateNetworkMessage(net, "", err, m.pollCounter)
+		m.updateNetworkMessage(net, "", err, netPollMan.PollCounter)
 		return nil, err
 	}
 	m.mbClients[net.UUID] = mbClient

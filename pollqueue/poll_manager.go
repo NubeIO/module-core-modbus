@@ -46,7 +46,8 @@ type NetworkPollManager struct {
 	LowPriorityMaxCycleTime    time.Duration // threshold setting for triggering a lockup alert for Low priority.
 
 	// Stats
-	Statistics PollStatistics
+	Statistics  PollStatistics
+	PollCounter int
 }
 
 func (pm *NetworkPollManager) StartPolling() {

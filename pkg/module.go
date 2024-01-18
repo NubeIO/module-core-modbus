@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"context"
+
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/module-core-modbus/smod"
@@ -17,12 +19,12 @@ type Module struct {
 	networks            []*model.Network
 	NetworkPollManagers []*pollqueue.NetworkPollManager
 	pluginUUID          string
+	pollingContext      context.Context
 	pollingCancel       func()
 	pollingEnabled      bool
 	running             bool
 	store               *cache.Cache
 	mbClients           map[string]*smod.ModbusClient
-	pollCounter         int
 }
 
 func (m *Module) Init(dbHelper nmodule.DBHelper, moduleName string) error {
