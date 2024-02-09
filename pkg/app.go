@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/NubeIO/lib-module-go/nmodule"
-	"github.com/NubeIO/lib-utils-go/array"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/module-core-modbus/pollqueue"
 	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/nils"
@@ -16,7 +15,6 @@ import (
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
-	"go.bug.st/serial"
 )
 
 func (m *Module) addNetwork(body *model.Network) (network *model.Network, err error) {
@@ -532,15 +530,6 @@ func (m *Module) networkUpdateErr(network *model.Network, message string, messag
 		m.modbusErrorMsg(" networkUpdateErr()", err)
 	}
 	return err
-}
-
-func (m *Module) listSerialPorts() (*array.Array, error) {
-	ports, err := serial.GetPortsList()
-	p := array.NewArray()
-	for _, port := range ports {
-		p.Add(port)
-	}
-	return p, err
 }
 
 func (m *Module) getPollingStats(networkName string) (result *dto.PollQueueStatistics, error error) {
