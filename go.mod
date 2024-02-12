@@ -2,11 +2,10 @@ module github.com/NubeIO/module-core-modbus
 
 go 1.18
 
-// replace github.com/NubeIO/rubix-os => /Users/i8e4/Works/NubeIO/rubix-os
-
 require (
 	github.com/NubeIO/lib-module-go v0.0.6
-	github.com/NubeIO/lib-schema-go v0.0.1
+	github.com/NubeIO/lib-schema-go v0.0.2
+	github.com/NubeIO/lib-units v0.0.4
 	github.com/NubeIO/lib-utils-go v0.0.1
 	github.com/NubeIO/nubeio-rubix-lib-helpers-go v0.2.7
 	github.com/NubeIO/nubeio-rubix-lib-models-go v1.13.0
@@ -15,7 +14,6 @@ require (
 	github.com/hashicorp/go-plugin v1.4.10
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
-	go.bug.st/serial v1.3.2
 )
 
 require (
@@ -23,7 +21,6 @@ require (
 	github.com/NubeIO/lib-networking v0.1.0 // indirect
 	github.com/NubeIO/lib-system v0.0.3 // indirect
 	github.com/NubeIO/lib-systemctl-go v0.3.1 // indirect
-	github.com/creack/goselect v0.1.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -34,6 +31,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/martinlindhe/unit v0.0.0-20230420213220-4adfd7d0a0d6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 // indirect
