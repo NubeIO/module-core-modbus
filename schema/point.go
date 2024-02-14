@@ -12,11 +12,18 @@ type PointSchema struct {
 	Enable      schema.Enable      `json:"enable"`
 
 	ObjectTypeModbus ObjectTypeModbus `json:"object_type"`
-	DataType         DataType         `json:"data_type"`
-	WriteMode        schema.WriteMode `json:"write_mode"`
-	AddressId        schema.AddressId `json:"address_id"`
-	// AddressLength    schema.AddressLength    `json:"address_length"` // Not needed, we are only reading one of each data type (this is all a point can store)
-	ObjectEncoding ObjectEncoding `json:"object_encoding"`
+	AddressId        struct {
+		Type        string `json:"type" default:"number"`
+		Title       string `json:"title" default:"Register"`
+		Default     int    `json:"default" default:"1"`
+		Minimum     int    `json:"minimum" default:"1"`
+		Maximim     int    `json:"maximum" default:"9999"`
+		ReadOnly    bool   `json:"readOnly" default:"false"`
+		Description string `json:"description" default:"Decimal format: 1-9999"`
+	} `json:"address_id"`
+	DataType       DataType         `json:"data_type"`
+	WriteMode      schema.WriteMode `json:"write_mode"`
+	ObjectEncoding ObjectEncoding   `json:"object_encoding"`
 
 	PollPriority schema.PollPriority `json:"poll_priority"`
 	PollRate     schema.PollRate     `json:"poll_rate"`

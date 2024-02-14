@@ -68,10 +68,8 @@ func (m *Module) addDevice(body *model.Device) (device *model.Device, err error)
 
 func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if body == nil {
-		m.modbusDebugMsg("addPoint(): nil point object")
 		return nil, errors.New("empty point body, no point created")
 	}
-	m.modbusDebugMsg("addPoint(): ", body.Name)
 
 	if isWriteable(body.WriteMode, body.ObjectType) {
 		body.WritePollRequired = boolean.NewTrue()
@@ -79,6 +77,10 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	} else {
 		body = resetWriteableProperties(body)
 	}
+	if *body.AddressID < 1 || *body.AddressID > 9999 {
+		return nil, errors.New("register must be between 1 and 9999")
+	}
+
 	body.ReadPollRequired = boolean.NewTrue()
 
 	isTypeBool := checkForBooleanType(body.ObjectType, body.DataType)
@@ -87,28 +89,23 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	isOutput := checkForOutputType(body.ObjectType)
 	body.IsOutput = nils.NewBool(isOutput)
 
-	// point, err = m.grpcMarshaller.CreatePoint(body, true)
 	point, err = m.grpcMarshaller.CreatePoint(body)
 	if err != nil {
 		return nil, err
 	}
 	point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
-	if point == nil || err != nil {
-		m.modbusDebugMsg("addPoint(): failed to create modbus point: ", body.Name)
+	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed to create modbus point. err: ", err))
 	}
-	m.modbusDebugMsg(fmt.Sprintf("addPoint(): %+v\n", point))
 
 	dev, err := m.grpcMarshaller.GetDevice(point.DeviceUUID)
-	if err != nil || dev == nil {
-		m.modbusDebugMsg("addPoint(): bad response from GetDevice()")
+	if err != nil {
 		return nil, err
 	}
 
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
-	if netPollMan == nil || err != nil {
-		m.modbusDebugMsg("addPoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		return
+	if err != nil {
+		return nil, err
 	}
 
 	if boolean.IsTrue(point.Enable) {
