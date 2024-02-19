@@ -4,16 +4,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
+	"time"
+
+	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/lib-utils-go/integer"
 	"github.com/NubeIO/lib-utils-go/nstring"
 	"github.com/NubeIO/module-core-modbus/smod"
-	"github.com/NubeIO/module-core-modbus/utils/writemode"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"time"
 )
 
 type Operation struct {
@@ -295,7 +296,7 @@ func SetPriorityArrayModeBasedOnWriteMode(pnt *model.Point) bool {
 }
 
 func isWriteable(writeMode datatype.WriteMode, objectType string) bool {
-	if isWriteableObjectType(objectType) && writemode.IsWriteable(writeMode) {
+	if isWriteableObjectType(objectType) && IsWriteable(writeMode) {
 		return true
 	} else {
 		return false
@@ -435,4 +436,25 @@ func convertOldObjectType(objectType string) string {
 func TimeStamp() (hostTime string) {
 	hostTime = time.Now().Format(time.Stamp)
 	return
+}
+
+func IsWriteable(writeMode datatype.WriteMode) bool {
+	switch writeMode {
+	case datatype.ReadOnce, datatype.ReadOnly:
+		return false
+	case datatype.WriteOnce, datatype.WriteOnceReadOnce, datatype.WriteAlways, datatype.WriteOnceThenRead, datatype.WriteAndMaintain:
+		return true
+	default:
+		return false
+	}
+}
+
+func resetWriteableProperties(point *model.Point) *model.Point {
+	point.WriteValueOriginal = nil
+	point.WriteValue = nil
+	point.WritePriority = nil
+	point.CurrentPriority = nil
+	point.EnableWriteable = boolean.NewFalse()
+	point.WritePollRequired = boolean.NewFalse()
+	return point
 }

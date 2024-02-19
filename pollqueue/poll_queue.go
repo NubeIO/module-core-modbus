@@ -2,11 +2,11 @@ package pollqueue
 
 import (
 	"container/heap"
-	"fmt"
+	"time"
+
 	"github.com/NubeIO/lib-utils-go/nstring"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 type NetworkPriorityPollQueue struct {
@@ -38,7 +38,7 @@ func (nq *NetworkPriorityPollQueue) AddToPriorityQueue(pp *PollingPoint) bool {
 	nq.pollQueueDebugMsg("NetworkPriorityPollQueue AddToPriorityQueue(): ", pp.FFPointUUID)
 	// TODO: this should be removed once no errors detected
 	if _, index := nq.PriorityQueue.GetPollingPointIndexByPointUUID(pp.FFPointUUID); index != -1 {
-		log.Errorf("NetworkPriorityPollQueue.AddToPriorityQueue: PollingPoint %s already exists in polling queue.", pp.FFPointUUID)
+		log.Errorf("NetworkPriorityPollQueue.AddToPriorityQueue: PollingPoint %s already exists in polling queue.\n", pp.FFPointUUID)
 		return false
 	}
 
@@ -151,11 +151,12 @@ func (nq *NetworkPriorityPollQueue) setNextPollPoint() {
 
 func (nq *NetworkPriorityPollQueue) pollQueueDebugMsg(args ...interface{}) {
 	if nstring.IsEqualIgnoreCase(nq.Config.LogLevel, "DEBUG") {
-		prefix := "Poll Queue: "
-		log.Info(prefix, fmt.Sprint(args...))
+		prefix := "Modbus Poll Queue: "
+		log.Info(prefix, args)
 	}
 }
+
 func (nq *NetworkPriorityPollQueue) pollQueueErrorMsg(args ...interface{}) {
-	prefix := "Poll Queue: "
-	log.Error(prefix, fmt.Sprint(args...))
+	prefix := "Modbus Poll Queue: "
+	log.Error(prefix, args)
 }

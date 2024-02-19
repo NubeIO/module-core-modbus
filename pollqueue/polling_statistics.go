@@ -2,10 +2,11 @@ package pollqueue
 
 import (
 	"fmt"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
-	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"math"
 	"time"
+
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
+	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 )
 
 type PollStatistics struct {

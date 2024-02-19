@@ -13,7 +13,7 @@ type ObjectEncoding struct {
 	Type     string   `json:"type" default:"string"`
 	Title    string   `json:"title" default:"Object Encoding (Endianness)"`
 	Options  []string `json:"enum" default:"[\"beb_lew\",\"beb_bew\",\"leb_lew\",\"leb_bew\"]"`
-	EnumName []string `json:"enumNames" default:"[\"beb_lew\",\"beb_bew\",\"leb_lew\",\"leb_bew\"]"`
+	EnumName []string `json:"enumNames" default:"[\"Big byte order, Little word order (1032)\",\"Big byte order, Big word order (3210)\",\"Little byte order, Big word order (0123)\",\"Little byte order, Little word order (2301)\"]"`
 	Default  string   `json:"default" default:"beb_lew"`
 	ReadOnly bool     `json:"readOnly" default:"false"`
 }

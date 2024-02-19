@@ -2,13 +2,14 @@ package pollqueue
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/lib-utils-go/float"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
-	"time"
 )
 
 // REFS:
@@ -25,9 +26,7 @@ type NetworkPollManager struct {
 	Marshaller nmodule.Marshaller
 
 	Enable                    bool
-	MaxPollRate               time.Duration
 	PollQueue                 *NetworkPriorityPollQueue
-	PluginQueueUnloader       *QueueUnloader
 	StatsCalcTimer            *time.Ticker
 	PortUnavailableTimeout    *time.Timer
 	QueueCheckerTimer         *time.Ticker
@@ -47,7 +46,8 @@ type NetworkPollManager struct {
 	LowPriorityMaxCycleTime    time.Duration // threshold setting for triggering a lockup alert for Low priority.
 
 	// Stats
-	Statistics PollStatistics
+	Statistics  PollStatistics
+	PollCounter int
 }
 
 func (pm *NetworkPollManager) StartPolling() {
@@ -155,11 +155,11 @@ func (pm *NetworkPollManager) GetPollRateDuration(rate datatype.PollRate, device
 	}
 }
 
-func (pm *NetworkPollManager) SinglePollFinished(pp *PollingPoint, point *model.Point, pollStartTime time.Time, writeSuccess, readSuccess, actualPoll, pollingWasNotRequired bool, retryType PollRetryType) {
+func (pm *NetworkPollManager) SinglePollFinished(pp *PollingPoint, point *model.Point, pollStartTime time.Time, writeSuccess, readSuccess, pollingWasNotRequired bool, retryType PollRetryType) {
 	pollEndTime := time.Now()
 	pollDuration := pollEndTime.Sub(pollStartTime)
 	pollTimeSecs := pollDuration.Seconds()
-	pm.PollingPointCompleteNotification(pp, point, writeSuccess, readSuccess, pollTimeSecs, false, true, retryType, actualPoll, pollingWasNotRequired)
+	pm.PollingPointCompleteNotification(pp, point, writeSuccess, readSuccess, pollTimeSecs, false, true, retryType, pollingWasNotRequired)
 }
 
 func (pm *NetworkPollManager) PollQueueErrorChecking() {
@@ -199,7 +199,7 @@ func (pm *NetworkPollManager) PollQueueErrorChecking() {
 			if pp == nil {
 				pm.pollQueueErrorMsg("pollQueue error check: Polling point doesn't exist for point ", pnt.Name, pnt.UUID)
 				pp = NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID)
-				pm.PollingPointCompleteNotification(pp, pnt, false, false, 0, true, true, NORMAL_RETRY, false, false) // This will perform the queue re-add actions based on Point WriteMode.
+				pm.PollingPointCompleteNotification(pp, pnt, false, false, 0, true, true, NORMAL_RETRY, false) // This will perform the queue re-add actions based on Point WriteMode.
 				continue
 			}
 		}
@@ -245,4 +245,8 @@ func (pm *NetworkPollManager) PortAvailable() {
 	pm.PartialPollStatsUpdate()
 	pm.PrintPollQueueStatistics()
 	pm.UnpausePolling()
+}
+
+func PollOnStartCheck(pnt *model.Point) bool {
+	return pnt.PollOnStartup == nil || boolean.IsTrue(pnt.PollOnStartup)
 }

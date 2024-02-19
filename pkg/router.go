@@ -2,15 +2,14 @@ package pkg
 
 import (
 	"encoding/json"
-	"fmt"
+	"net/http"
+
 	"github.com/NubeIO/lib-module-go/nhttp"
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-module-go/router"
 	"github.com/NubeIO/module-core-modbus/schema"
-	"github.com/NubeIO/nubeio-rubix-lib-helpers-go/pkg/uurl"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/dto"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
-	"net/http"
 )
 
 type Scan struct {
@@ -63,9 +62,7 @@ func InitRouter() {
 	route.Handle(nhttp.DELETE, "/api/points/:uuid", DeletePoint)
 	route.Handle(nhttp.PATCH, "/api/points/:uuid/write", PointWrite)
 
-	route.Handle(nhttp.GET, "/api/list/serial", GetListSerial)
 	route.Handle(nhttp.GET, "/api/polling/stats/network/name/:name", GetNetworkPollingStats)
-	route.Handle(nhttp.POST, "/api/modbus/point/operation", CreatePointOperation)
 }
 
 func GetNetworkSchema(m *nmodule.Module, r *router.Request) ([]byte, error) {
@@ -203,51 +200,10 @@ func PointWrite(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	return json.Marshal(pnt)
 }
 
-func GetListSerial(m *nmodule.Module, r *router.Request) ([]byte, error) {
-	serial, err := (*m).(*Module).listSerialPorts()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(serial)
-}
-
 func GetNetworkPollingStats(m *nmodule.Module, r *router.Request) ([]byte, error) {
 	stats, err := (*m).(*Module).getPollingStats(r.PathParams["name"])
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(stats)
-}
-
-func CreatePointOperation(m *nmodule.Module, r *router.Request) ([]byte, error) {
-	var body Body
-	err := json.Unmarshal(r.Body, &body)
-	if err != nil {
-		return nil, err
-	}
-	netType := body.Network.TransportType
-	mbClient, err := (*m).(*Module).setClient(body.Network, body.Device, false)
-	if err != nil {
-		(*m).(*Module).modbusErrorMsg(err, "ERROR ON set modbus client")
-		return nil, err
-	}
-	if netType == dto.TransType.Serial || netType == dto.TransType.LoRa {
-		if body.Device.AddressId >= 1 {
-			mbClient.RTUClientHandler.SlaveID = byte(body.Device.AddressId)
-		}
-	} else if netType == dto.TransType.IP {
-		url, err := uurl.JoinIpPort(body.Device.Host, body.Device.Port)
-		if err != nil {
-			(*m).(*Module).modbusErrorMsg(fmt.Sprintf("failed to validate device IP %s\n", url))
-			return nil, err
-		}
-		mbClient.TCPClientHandler.Address = url
-		mbClient.TCPClientHandler.SlaveID = byte(body.Device.AddressId)
-	}
-	_, responseValue, err := (*m).(*Module).networkRequest(mbClient, body.Point, false)
-	if err != nil {
-		return nil, err
-	}
-	(*m).(*Module).modbusDebugMsg("responseValue", responseValue)
-	return json.Marshal(responseValue)
 }

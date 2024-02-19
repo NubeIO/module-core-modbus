@@ -4,12 +4,13 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/NubeIO/lib-module-go/nmodule"
 	"github.com/NubeIO/lib-utils-go/boolean"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/datatype"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/model"
 	"github.com/NubeIO/nubeio-rubix-lib-models-go/nargs"
-	"time"
 )
 
 // REFS:
@@ -40,18 +41,31 @@ func (pm *NetworkPollManager) RebuildPollingQueue() error {
 			pp := NewPollingPoint(pnt.UUID, pnt.DeviceUUID, dev.NetworkUUID)
 			pp.PollPriority = pnt.PollPriority
 			pm.pollQueueDebugMsg(fmt.Sprintf("RebuildPollingQueue() pp: %+v", pp))
-			pm.AddToPriorityQueue(pp)
+			if PollOnStartCheck(pnt) {
+				pm.AddToPriorityQueue(pp)
+			} else {
+				pm.PollingPointCompleteNotification(pp, pnt, true, true, 0, true, false, NORMAL_RETRY, true)
+			}
 		}
 	}
 	heap.Init(pm.PollQueue.PriorityQueue)
 	return nil
 }
 
-func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint, point *model.Point, writeSuccess, readSuccess bool, pollTimeSecs float64, pointUpdate, resetToConfiguredPriority bool, retryType PollRetryType, actualPoll, pollingWasNotRequired bool) {
-	pm.pollQueuePollingMsg(fmt.Sprintf("POLLING COMPLETE: Point UUID: %s, writeSuccess: %t, readSuccess: %t, pointUpdate: %t, actualPoll: %t, pollingWasNotRequired: %t, retryType: %s, pollTime: %f", pp.FFPointUUID, writeSuccess, readSuccess, pointUpdate, actualPoll, pollingWasNotRequired, retryType, pollTimeSecs))
+func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint, point *model.Point, writeSuccess, readSuccess bool, pollTimeSecs float64, pointUpdate, resetToConfiguredPriority bool, retryType PollRetryType, pollingWasNotRequired bool) {
+	pm.pollQueuePollingMsg(fmt.Sprintf("POLLING COMPLETE: Point UUID: %s, writeSuccess: %t, readSuccess: %t, pointUpdate: %t, pollingWasNotRequired: %t, retryType: %s, pollTime: %f", pp.FFPointUUID, writeSuccess, readSuccess, pointUpdate, pollingWasNotRequired, retryType, pollTimeSecs))
 
 	if !pointUpdate {
-		pm.PollCompleteStatsUpdate(pp, pollTimeSecs) // This will update the relevant PollManager statistics.
+		// This will update the relevant PollManager statistics
+		pm.PollCompleteStatsUpdate(pp, pollTimeSecs)
+	}
+
+	pp.resetPollingPointTimers()
+
+	// point was deleted while it was out for polling
+	if point == nil || (pm.PollQueue.QueueUnloader.RemoveCurrent && pm.PollQueue.QueueUnloader.CurrentPollPoint.FFPointUUID == pp.FFPointUUID) {
+		pm.PollQueue.QueueUnloader.RemoveCurrent = false
+		return
 	}
 
 	// Reset poll priority to set value (in cases where pp has been escalated to ASAP).
@@ -59,186 +73,134 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 		pp.PollPriority = point.PollPriority
 	}
 
-	pp.resetPollingPointTimers()
-	if pm.PollQueue.QueueUnloader.RemoveCurrent && pm.PollQueue.QueueUnloader.CurrentPollPoint.FFPointUUID == pp.FFPointUUID {
-		pm.PollQueue.QueueUnloader.RemoveCurrent = false
-		return
-	}
-
+	// instantly re-add if it was updated while polling
 	val, ok := pm.PollQueue.PointsUpdatedWhilePolling[point.UUID]
 	if ok {
 		delete(pm.PollQueue.PointsUpdatedWhilePolling, point.UUID)
 		if val == true { // point needs an ASAP write
 			pp.PollPriority = datatype.PriorityASAP
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 			return
 		}
 	}
 
+	// used to avoid a db write if neither of these are changed
 	origReadPollReq := *point.ReadPollRequired
 	origWritePollReq := *point.WritePollRequired
 
+	addSuccess := true
+
 	switch point.WriteMode {
-	case datatype.ReadOnce: // ReadOnce          If read_successful then don't re-add.
+	case datatype.ReadOnce: // If read_successful then don't re-add.
 		point.WritePollRequired = boolean.NewFalse()
 		if retryType == NEVER_RETRY || ((readSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) {
 			point.ReadPollRequired = boolean.NewFalse()
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		} else if (boolean.IsTrue(point.ReadPollRequired) && !readSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
 			point.ReadPollRequired = boolean.NewTrue()
 			pm.AddToPriorityQueue(pp)
 		} else if retryType == DELAYED_RETRY {
 			point.ReadPollRequired = boolean.NewTrue()
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 		}
 
-	case datatype.ReadOnly: // ReadOnly          Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.ReadOnly: // Re-add with ReadPollRequired true, WritePollRequired false.
 		point.WritePollRequired = boolean.NewFalse()
 		point.ReadPollRequired = boolean.NewTrue()
 		if ((readSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 		} else if (!readSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 		} else if retryType == NEVER_RETRY {
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		}
 
-	case datatype.WriteOnce: // WriteOnce         If write_successful then don't re-add.
+	case datatype.WriteOnce: // If write_successful then don't re-add.
 		point.ReadPollRequired = boolean.NewFalse()
 		if ((writeSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) || retryType == NEVER_RETRY {
 			point.WritePollRequired = boolean.NewFalse()
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		} else if (boolean.IsTrue(point.WritePollRequired) && !writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
 			point.WritePollRequired = boolean.NewTrue() // TODO: this might cause these points to write more than once.
-			pm.AddToPriorityQueue(pp)                   // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 		} else if retryType == DELAYED_RETRY {
 			point.WritePollRequired = boolean.NewTrue()
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 		}
 
-	case datatype.WriteOnceReadOnce: // WriteOnceReadOnce     If write_successful and read_success then don't re-add.
+	case datatype.WriteOnceReadOnce: // If write_successful and read_success then don't re-add.
 		if (boolean.IsTrue(point.WritePollRequired) && writeSuccess && retryType == NORMAL_RETRY) || retryType == NEVER_RETRY {
 			point.WritePollRequired = boolean.NewFalse()
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		} else if pointUpdate || (boolean.IsTrue(point.WritePollRequired) && !writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
 			point.WritePollRequired = boolean.NewTrue()
 			if pointUpdate {
 				point.ReadPollRequired = boolean.NewTrue()
 			}
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 			break
 		} else if retryType == DELAYED_RETRY {
 			point.WritePollRequired = boolean.NewTrue()
 			point.ReadPollRequired = boolean.NewTrue()
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 			break
 		}
 		if readSuccess && retryType == NORMAL_RETRY || retryType == NEVER_RETRY {
 			point.ReadPollRequired = boolean.NewFalse()
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		} else if boolean.IsTrue(point.ReadPollRequired) && !readSuccess && retryType == NORMAL_RETRY || retryType == IMMEDIATE_RETRY {
 			point.ReadPollRequired = boolean.NewTrue()
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 		}
 
-	case datatype.WriteAlways: // WriteAlways       Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
+	case datatype.WriteAlways: // Re-add with ReadPollRequired false, WritePollRequired true. confirm that a successful write ensures the value is set to the write value.
 		point.ReadPollRequired = boolean.NewFalse()
 		point.WritePollRequired = boolean.NewTrue()
-		if (writeSuccess && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
-			break
+		if ((writeSuccess || pollingWasNotRequired) && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 		} else if (!writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
-			break
+			pm.AddToPriorityQueue(pp)
 		} else if retryType == NEVER_RETRY {
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		}
 
-	case datatype.WriteOnceThenRead: // WriteOnceThenRead     If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
+	case datatype.WriteOnceThenRead: // If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.
 		point.ReadPollRequired = boolean.NewTrue()
 		if retryType == NEVER_RETRY {
 			if writeSuccess {
 				point.WritePollRequired = boolean.NewFalse()
 			}
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 		} else if pointUpdate || (boolean.IsTrue(point.WritePollRequired) && !writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
 			if writeSuccess {
 				point.WritePollRequired = boolean.NewFalse()
 			}
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 			break
 		} else if (boolean.IsTrue(point.WritePollRequired) && writeSuccess && retryType == NORMAL_RETRY) || retryType == DELAYED_RETRY {
 			if writeSuccess {
 				point.WritePollRequired = boolean.NewFalse()
 			}
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 			break
 		}
 		if readSuccess && retryType == NORMAL_RETRY || retryType == DELAYED_RETRY {
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 			break
 		} else if !readSuccess && retryType == NORMAL_RETRY || retryType == IMMEDIATE_RETRY {
-			pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+			pm.AddToPriorityQueue(pp)
 		}
 
-	case datatype.WriteAndMaintain: // WriteAndMaintain    If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
+	case datatype.WriteAndMaintain: // If write_successful: Re-add with ReadPollRequired true, WritePollRequired false.  Need to check that write value matches present value after each read poll.
 		point.ReadPollRequired = boolean.NewTrue()
 		if (boolean.IsTrue(point.WritePollRequired) && !writeSuccess && retryType == NORMAL_RETRY) || retryType == IMMEDIATE_RETRY {
 			pm.AddToPriorityQueue(pp)
 			break
 		} else if retryType == DELAYED_RETRY {
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 			break
 		} else if retryType == NEVER_RETRY {
-			addSuccess := pm.PollQueue.AddToStandbyQueue(pp)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.PollQueue.AddToStandbyQueue(pp)
 			break
 		}
 
@@ -251,22 +213,20 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 			}
 			if noPV || readValue != *point.WriteValue {
 				point.WritePollRequired = boolean.NewTrue()
-				pm.AddToPriorityQueue(pp) // re-add to poll queue immediately
+				pm.AddToPriorityQueue(pp)
 			} else {
 				point.WritePollRequired = boolean.NewFalse()
-				addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-				if !addSuccess {
-					pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-				}
+				addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 			}
 		} else {
 			// If WriteValue is nil we still need to re-add the point to perform a read
 			point.WritePollRequired = boolean.NewFalse()
-			addSuccess := pm.AddToStandbyQueueWithRePoll(pp, point)
-			if !addSuccess {
-				pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
-			}
+			addSuccess = pm.AddToStandbyQueueWithRePoll(pp, point)
 		}
+	}
+
+	if !addSuccess {
+		pm.pollQueueErrorMsg(fmt.Sprintf("Modbus PollingPointCompleteNotification(): polling point could not be added to StandbyPollingPoints slice.  (%s)", pp.FFPointUUID))
 	}
 
 	pm.PollQueue.QueueUnloader.CurrentPollPoint = nil
