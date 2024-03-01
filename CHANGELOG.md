@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [v1.0.0-rc.1](https://github.com/NubeIO/module-core-postgres/tree/v1.0.0-rc.1) (2024-03-01)
+
+- Prerequisites:
+    - ROS >= 1.0.0
+
 ## [v0.1.0](https://github.com/NubeIO/module-core-postgres/tree/v0.0.1) (2024-02-20)
 
 - General updates to get it up to speed ([#9](https://github.com/NubeIO/module-core-modbus/pull/9))
