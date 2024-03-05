@@ -12,8 +12,8 @@ type DataType struct {
 type ObjectEncoding struct {
 	Type     string   `json:"type" default:"string"`
 	Title    string   `json:"title" default:"Object Encoding (Endianness)"`
-	Options  []string `json:"enum" default:"[\"beb_lew\",\"beb_bew\",\"leb_lew\",\"leb_bew\"]"`
-	EnumName []string `json:"enumNames" default:"[\"Big byte order, Little word order (1032)\",\"Big byte order, Big word order (3210)\",\"Little byte order, Big word order (0123)\",\"Little byte order, Little word order (2301)\"]"`
+	Options  []string `json:"enum" default:"[\"beb_bew\",\"leb_bew\",\"beb_lew\",\"leb_lew\",]"`
+	EnumName []string `json:"enumNames" default:"[\"Standard/Network Order (ABCD)\",\"Byte Swap (BADC)\",\"Word Swap (CDAB)\",\"Byte Swap + Word Swap (DCBA)\"]"`
 	Default  string   `json:"default" default:"beb_lew"`
 	ReadOnly bool     `json:"readOnly" default:"false"`
 }
@@ -21,8 +21,8 @@ type ObjectEncoding struct {
 type ObjectTypeModbus struct {
 	Type     string   `json:"type" default:"string"`
 	Title    string   `json:"title" default:"Object Type"`
-	Options  []string `json:"enum" default:"[\"coil\",\"discrete_input\",\"input_register\",\"holding_register\",\"read_coil\",\"write_coil\",\"read_discrete_input\",\"read_register\",\"read_holding\",\"write_holding\"]"`
-	EnumName []string `json:"enumNames" default:"[\"Coil\",\"Discrete Input\",\"Input Register\",\"Holding Register\",\"Read Coil\",\"Write Coil\",\"Read Discrete Input\",\"Read Input Register\",\"Read Holding Register\",\"Write Holding Register\"]"`
+	Options  []string `json:"enum" default:"[\"coil\",\"discrete_input\",\"input_register\",\"holding_register\"]"`
+	EnumName []string `json:"enumNames" default:"[\"Coil\",\"Discrete Input\",\"Input Register\",\"Holding Register\"]"`
 	Default  string   `json:"default" default:"coil"`
 	ReadOnly bool     `json:"readOnly" default:"false"`
 }
