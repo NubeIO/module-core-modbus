@@ -98,8 +98,6 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 
 	m.modbusPollingMsg(fmt.Sprintf("next poll drawn. Network: %s, Device: %s, Point: %s, Priority: %s, Device-Add: %d, Point-Add: %d, Point Type: %s, WriteRequired: %t, ReadRequired: %t", net.Name, dev.Name, pnt.Name, pnt.PollPriority, dev.AddressId, integer.NonNil(pnt.AddressID), pnt.ObjectType, boolean.IsTrue(pnt.WritePollRequired), boolean.IsTrue(pnt.ReadPollRequired)))
 
-	SetPriorityArrayModeBasedOnWriteMode(pnt) // ensures the point PointPriorityArrayMode is set correctly
-
 	var err error = nil
 	mbClient, ok := m.mbClients[net.UUID]
 	if !ok {
@@ -176,7 +174,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			// TODO: should this be here?????
 			if readSuccess {
 				if net.MaxPollRate == nil {
-					*net.MaxPollRate = 0.03
+					*net.MaxPollRate = 0.1
 				}
 				sleepTime := time.Second * time.Duration(*net.MaxPollRate)
 				m.modbusDebugMsg(sleepTime.String(), " delay between read and write.")
@@ -230,10 +228,10 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			newValue = readResponseValue
 		}
 	} else {
-		newValue = float.NonNil(pnt.PresentValue)
+		newValue = float.NonNil(pnt.OriginalValue)
 	}
 
-	isChange := !float.ComparePtrValues(pnt.PresentValue, &newValue)
+	isChange := !float.ComparePtrValues(pnt.OriginalValue, &newValue)
 	if isChange {
 		// For write_once and write_always type, write value should become present value
 		writeValueToPresentVal := (pnt.WriteMode == datatype.WriteOnce || pnt.WriteMode == datatype.WriteAlways) && writeSuccess && pnt.WriteValue != nil
@@ -241,7 +239,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			if writeValueToPresentVal {
 				readSuccess = true
 			}
-			pnt, _ = m.pointUpdate(pnt, newValue, readSuccess || writeSuccess)
+			pnt, _ = m.pointUpdate(pnt, newValue)
 		}
 
 		if netPollMan.PollCounter == 1 || netPollMan.PollCounter%100 == 0 { // give the user some feedback on how the polling has been working
