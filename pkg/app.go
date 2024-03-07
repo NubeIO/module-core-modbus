@@ -68,20 +68,26 @@ func (m *Module) addDevice(body *model.Device) (device *model.Device, err error)
 
 func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	if body == nil {
+		m.modbusDebugMsg("addPoint(): nil point object")
 		return nil, errors.New("empty point body, no point created")
 	}
+	m.modbusDebugMsg("addPoint(): ", body.Name)
 
 	if isWriteable(body.WriteMode, body.ObjectType) {
-		body.WritePollRequired = boolean.NewTrue()
 		body.EnableWriteable = boolean.NewTrue()
+		if pollqueue.PollOnStartCheck(body) {
+			body.WritePollRequired = boolean.NewTrue()
+		}
 	} else {
 		body = resetWriteableProperties(body)
 	}
-	if *body.AddressID < 1 || *body.AddressID > 9999 {
-		return nil, errors.New("register must be between 1 and 9999")
-	}
-
 	body.ReadPollRequired = boolean.NewTrue()
+
+	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
+
+	if *body.AddressID < 1 || *body.AddressID > 65535 {
+		return nil, errors.New("register must be between 1 and 65535")
+	}
 
 	isTypeBool := checkForBooleanType(body.ObjectType, body.DataType)
 	body.IsTypeBool = nils.NewBool(isTypeBool)
@@ -267,6 +273,12 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 		body.EnableWriteable = boolean.NewTrue()
 	} else {
 		body = resetWriteableProperties(body)
+	}
+
+	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
+
+	if *body.AddressID < 1 || *body.AddressID > 65535 {
+		return nil, errors.New("register must be between 1 and 65535")
 	}
 
 	isTypeBool := checkForBooleanType(body.ObjectType, body.DataType)
@@ -456,9 +468,8 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 }
 
 // THE FOLLOWING FUNCTIONS ARE CALLED FROM WITHIN THE PLUGIN
-func (m *Module) pointUpdate(point *model.Point, value float64, readSuccess bool) (*model.Point, error) {
+func (m *Module) pointUpdate(point *model.Point, value float64) (*model.Point, error) {
 	priorArr := make(map[string]*float64)
-	priorArr["_16"] = &value
 	pointWriter := &dto.PointWriter{
 		Priority:     &priorArr,
 		PresentValue: &value,
