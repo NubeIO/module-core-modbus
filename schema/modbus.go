@@ -12,7 +12,7 @@ type DataType struct {
 type ObjectEncoding struct {
 	Type     string   `json:"type" default:"string"`
 	Title    string   `json:"title" default:"Object Encoding (Endianness)"`
-	Options  []string `json:"enum" default:"[\"beb_bew\",\"leb_bew\",\"beb_lew\",\"leb_lew\",]"`
+	Options  []string `json:"enum" default:"[\"beb_bew\",\"leb_bew\",\"beb_lew\",\"leb_lew\"]"`
 	EnumName []string `json:"enumNames" default:"[\"Standard/Network Order (ABCD)\",\"Byte Swap (BADC)\",\"Word Swap (CDAB)\",\"Byte Swap + Word Swap (DCBA)\"]"`
 	Default  string   `json:"default" default:"beb_lew"`
 	ReadOnly bool     `json:"readOnly" default:"false"`
