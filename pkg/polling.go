@@ -144,7 +144,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 	if boolean.IsTrue(pnt.ReadPollRequired) && (boolean.IsFalse(pnt.WritePollRequired) || (bitwiseType && boolean.IsTrue(pnt.WritePollRequired))) { // DO READ IF REQUIRED
 		readResponse, readResponseValue, err = m.networkRead(mbClient, pnt)
 		if err != nil {
-			err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
+			err = m.internalPointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 			netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.IMMEDIATE_RETRY)
 			return false, nil
 		}
@@ -153,7 +153,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			bitValue, err = getBitFromFloat64(readResponseValue, *pnt.BitwiseIndex)
 			if err != nil {
 				m.modbusDebugMsg("Bitwise Error: ", err)
-				err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
+				err = m.internalPointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 				return false, nil
 			}
@@ -182,7 +182,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			}
 			if bitwiseType {
 				if !readSuccess || math.Mod(readResponseValue, 1) != 0 {
-					err = m.pointUpdateErr(pnt, "read fail: bitwise point needs successful read before write", dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
+					err = m.internalPointUpdateErr(pnt, "read fail: bitwise point needs successful read before write", dto.MessageLevel.Fail, dto.CommonFaultCode.PointError)
 					netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.DELAYED_RETRY)
 					return false, nil
 				}
@@ -198,7 +198,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			}
 			writeResponse, writeResponseValue, err = m.networkWrite(mbClient, pnt)
 			if err != nil {
-				err = m.pointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointWriteError)
+				err = m.internalPointUpdateErr(pnt, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.PointWriteError)
 				netPollMan.SinglePollFinished(pp, pnt, pollStartTime, false, false, false, pollqueue.IMMEDIATE_RETRY)
 				return false, nil
 			}
@@ -239,7 +239,7 @@ func (m *Module) pollSingleNetwork(netPollMan *pollqueue.NetworkPollManager) (bo
 			if writeValueToPresentVal {
 				readSuccess = true
 			}
-			pnt, _ = m.pointUpdate(pnt, newValue)
+			pnt, _ = m.internalPointUpdate(pnt, newValue)
 		}
 
 		if netPollMan.PollCounter == 1 || netPollMan.PollCounter%100 == 0 { // give the user some feedback on how the polling has been working
