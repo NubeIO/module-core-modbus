@@ -335,6 +335,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 		return
 	}
 
+	body.IgnorePresentValueUpdate = true
 	pnt, err := m.grpcMarshaller.PointWrite(pntUUID, body)
 	if err != nil {
 		m.modbusDebugMsg("writePoint(): bad response from WritePoint(), ", err)
