@@ -83,8 +83,6 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	}
 	body.ReadPollRequired = boolean.NewTrue()
 
-	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
-
 	if *body.AddressID < 1 || *body.AddressID > 65535 {
 		return nil, errors.New("register must be between 1 and 65535")
 	}
@@ -274,8 +272,6 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	} else {
 		body = resetWriteableProperties(body)
 	}
-
-	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
 
 	if *body.AddressID < 1 || *body.AddressID > 65535 {
 		return nil, errors.New("register must be between 1 and 65535")
