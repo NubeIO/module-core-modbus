@@ -207,9 +207,9 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 		if point.WriteValue != nil {
 			noPV := true
 			var readValue float64
-			if point.PresentValue != nil {
+			if point.OriginalValue != nil {
 				noPV = false
-				readValue = *point.PresentValue
+				readValue = *point.OriginalValue
 			}
 			if noPV || readValue != *point.WriteValue {
 				point.WritePollRequired = boolean.NewTrue()
