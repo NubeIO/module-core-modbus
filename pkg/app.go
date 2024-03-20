@@ -83,8 +83,6 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 	}
 	body.ReadPollRequired = boolean.NewTrue()
 
-	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
-
 	if *body.AddressID < 1 || *body.AddressID > 65535 {
 		return nil, errors.New("register must be between 1 and 65535")
 	}
@@ -123,7 +121,7 @@ func (m *Module) addPoint(body *model.Point) (point *model.Point, err error) {
 			netPollMan.PollingPointCompleteNotification(pp, point, true, true, 0, true, false, pollqueue.NORMAL_RETRY, true)
 		}
 	} else {
-		err = m.pointUpdateErr(point, "point disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.PointError)
+		err = m.internalPointUpdateErr(point, "point disabled", dto.MessageLevel.Warning, dto.CommonFaultCode.PointError)
 	}
 	return point, nil
 }
@@ -275,8 +273,6 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 		body = resetWriteableProperties(body)
 	}
 
-	SetPriorityArrayModeBasedOnWriteMode(body) // ensures the point PointPriorityArrayMode is set correctly
-
 	if *body.AddressID < 1 || *body.AddressID > 65535 {
 		return nil, errors.New("register must be between 1 and 65535")
 	}
@@ -314,7 +310,7 @@ func (m *Module) updatePoint(uuid string, body *model.Point) (point *model.Point
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusErrorMsg("updatePoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(point, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
+		_ = m.internalPointUpdateErr(point, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return
 	}
 
@@ -339,6 +335,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 		return
 	}
 
+	body.IgnorePresentValueUpdate = true
 	pnt, err := m.grpcMarshaller.PointWrite(pntUUID, body)
 	if err != nil {
 		m.modbusDebugMsg("writePoint(): bad response from WritePoint(), ", err)
@@ -355,7 +352,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusDebugMsg("writePoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(point, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
+		_ = m.internalPointUpdateErr(point, err.Error(), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return nil, err
 	}
 
@@ -379,7 +376,7 @@ func (m *Module) writePoint(pntUUID string, body *dto.PointWriter) (point *model
 			point, err = m.grpcMarshaller.UpdatePoint(point.UUID, point)
 			if err != nil || point == nil {
 				m.modbusDebugMsg("writePoint(): bad response from UpdatePoint() err:", err)
-				m.pointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
+				m.internalPointUpdateErr(point, fmt.Sprint("writePoint(): bad response from UpdatePoint() err:", err), dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 				return point, err
 			}
 			pp := netPollMan.PollQueue.RemovePollingPointByPointUUID(point.UUID)
@@ -455,7 +452,7 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 	netPollMan, err := m.getNetworkPollManagerByUUID(dev.NetworkUUID)
 	if netPollMan == nil || err != nil {
 		m.modbusDebugMsg("addPoint(): cannot find NetworkPollManager for network: ", dev.NetworkUUID)
-		_ = m.pointUpdateErr(body, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
+		_ = m.internalPointUpdateErr(body, "cannot find NetworkPollManager for network", dto.MessageLevel.Fail, dto.CommonFaultCode.SystemError)
 		return
 	}
 
@@ -467,25 +464,22 @@ func (m *Module) deletePoint(body *model.Point) (ok bool, err error) {
 	return true, nil
 }
 
-// THE FOLLOWING FUNCTIONS ARE CALLED FROM WITHIN THE PLUGIN
-func (m *Module) pointUpdate(point *model.Point, value float64) (*model.Point, error) {
-	priorArr := make(map[string]*float64)
+func (m *Module) internalPointUpdate(point *model.Point, value float64) (*model.Point, error) {
 	pointWriter := &dto.PointWriter{
-		Priority:     &priorArr,
-		PresentValue: &value,
-		Message:      fmt.Sprintf("last-updated: %s", utilstime.TimeStamp()),
-		Fault:        false,
-		PollState:    datatype.PointStatePollOk,
+		OriginalValue: &value,
+		Message:       fmt.Sprintf("last-updated: %s", utilstime.TimeStamp()),
+		Fault:         false,
+		PollState:     datatype.PointStatePollOk,
 	}
 	pnt, err := m.grpcMarshaller.PointWrite(point.UUID, pointWriter)
 	if err != nil {
-		m.modbusErrorMsg("pointUpdate() error: ", err)
+		m.modbusErrorMsg("internalPointUpdate() error: ", err)
 		return nil, err
 	}
 	return &pnt.Point, nil
 }
 
-func (m *Module) pointUpdateErr(point *model.Point, message string, messageLevel string, messageCode string) error {
+func (m *Module) internalPointUpdateErr(point *model.Point, message string, messageLevel string, messageCode string) error {
 	if point == nil {
 		return errors.New("point body can not be empty")
 	}
@@ -496,7 +490,7 @@ func (m *Module) pointUpdateErr(point *model.Point, message string, messageLevel
 	point.CommonFault.LastFail = time.Now().UTC()
 	err := m.grpcMarshaller.UpdatePointErrors(point.UUID, point)
 	if err != nil {
-		m.modbusErrorMsg("pointUpdateErr()", err)
+		m.modbusErrorMsg("internalPointUpdateErr()", err)
 	}
 	return err
 }

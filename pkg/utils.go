@@ -283,18 +283,6 @@ func (m *Module) networkRead(mbClient *smod.ModbusClient, pnt *model.Point) (res
 	return nil, 0, errors.New("modbus-read: dataType is not recognized")
 }
 
-func SetPriorityArrayModeBasedOnWriteMode(pnt *model.Point) bool {
-	switch pnt.WriteMode {
-	case datatype.ReadOnce, datatype.ReadOnly:
-		pnt.PointPriorityArrayMode = datatype.ReadOnlyNoPriorityArrayRequired
-		return true
-	case datatype.WriteOnce, datatype.WriteOnceReadOnce, datatype.WriteAlways, datatype.WriteOnceThenRead, datatype.WriteAndMaintain:
-		pnt.PointPriorityArrayMode = datatype.PriorityArrayToWriteValue
-		return true
-	}
-	return false
-}
-
 func isWriteable(writeMode datatype.WriteMode, objectType string) bool {
 	if isWriteableObjectType(objectType) && IsWriteable(writeMode) {
 		return true

@@ -9,7 +9,7 @@ import (
 )
 
 // PriorityPollQueue type defines the base methods used to implement the `heap` library.  https://pkg.go.dev/container/heap
-//  Also protected by a mutex
+// Also protected by a mutex
 type PriorityPollQueue struct {
 	priorityQueue []*PollingPoint
 	mu            sync.Mutex
