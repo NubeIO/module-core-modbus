@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v1.0.0-rc.4](https://github.com/NubeIO/module-core-postgres/tree/v1.0.0-rc.4) (2024-03-21)
+
+- Improvement/point write (#21)
+- Prerequisites:
+    - ROS >= 1.0.0
+
 ## [v1.0.0-rc.3](https://github.com/NubeIO/module-core-postgres/tree/v1.0.0-rc.3) (2024-03-13)
 
 - Fix: point schema issue (#19)
