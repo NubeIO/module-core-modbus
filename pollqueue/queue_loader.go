@@ -85,8 +85,17 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 	}
 
 	// used to avoid a db write if neither of these are changed
-	origReadPollReq := *point.ReadPollRequired
-	origWritePollReq := *point.WritePollRequired
+	origReadPollReq := boolean.IsTrue(point.ReadPollRequired)
+	origWritePollReq := boolean.IsTrue(point.WritePollRequired)
+	fixNilPollReq := false
+	if point.ReadPollRequired == nil {
+		point.ReadPollRequired = boolean.NewFalse()
+		fixNilPollReq = true
+	}
+	if point.WritePollRequired == nil {
+		point.WritePollRequired = boolean.NewFalse()
+		fixNilPollReq = true
+	}
 
 	addSuccess := true
 
@@ -231,7 +240,7 @@ func (pm *NetworkPollManager) PollingPointCompleteNotification(pp *PollingPoint,
 
 	pm.PollQueue.QueueUnloader.CurrentPollPoint = nil
 
-	if *point.ReadPollRequired != origReadPollReq || *point.WritePollRequired != origWritePollReq {
+	if fixNilPollReq || *point.ReadPollRequired != origReadPollReq || *point.WritePollRequired != origWritePollReq {
 		point, _ = pm.Marshaller.UpdatePoint(point.UUID, point)
 	}
 	pm.pollQueuePollingMsg("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
