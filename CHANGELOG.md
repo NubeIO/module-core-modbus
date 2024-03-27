@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v1.0.0-rc.5](https://github.com/NubeIO/module-core-postgres/tree/v1.0.0-rc.5) (2024-03-27)
+
+- Fix nil crash on PollRequired properties (#23)
+- Prerequisites:
+    - ROS >= 1.0.0
+
 ## [v1.0.0-rc.4](https://github.com/NubeIO/module-core-postgres/tree/v1.0.0-rc.4) (2024-03-21)
 
 - Improvement/point write (#21)
